@@ -25,8 +25,8 @@ for arg in "$@"; do
 done
 
 # ── Determine if running from pipe (curl | bash) or from a file ──
-REPO_URL="https://github.com/wallacelw/Huawei-doc-templates.git"
-CLONE_DIR="Huawei-doc-templates"
+REPO_URL="https://github.com/wallacelw/huawei-doc-templates.git"
+CLONE_DIR="huawei-doc-templates"
 
 if [[ -n "${BASH_SOURCE[0]:-}" ]] && [[ -f "${BASH_SOURCE[0]}" ]]; then
     # Running from a file (./install.sh)

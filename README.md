@@ -9,14 +9,14 @@ skill, assets, and build config. Documents compile to PDF via XeLaTeX.
 **One-liner (clone + install):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/wallacelw/Huawei-doc-templates/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/wallacelw/huawei-doc-templates/main/install.sh | bash
 ```
 
 **Or step by step:**
 
 ```bash
-git clone https://github.com/wallacelw/Huawei-doc-templates.git
-cd Huawei-doc-templates
+git clone https://github.com/wallacelw/huawei-doc-templates.git
+cd huawei-doc-templates
 ./install.sh
 ```
 

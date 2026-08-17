@@ -9,7 +9,7 @@
 \setguidetitle{Guide: Environment Setup for Huawei Cloud Development}
 \setheadertitle{Huawei Cloud -- ECS + SSH + MaaS Gateway Setup}
 \setcovertext{Huawei Technologies CO., LTD}
-\setdocversion{2.7.0}
+\setdocversion{2.7.1}
 
 \begin{document}
 
@@ -524,8 +524,8 @@ times. It merges VS Code settings rather than overwriting them, and
 
   \begin{code}[bash]
 cd ~
-git clone <repo-url> Huawei-doc-templates
-cd Huawei-doc-templates
+git clone <repo-url> huawei-doc-templates
+cd huawei-doc-templates
   \end{code}
 
   \item Run the setup script (installs XeLaTeX, latexmk, fonts, the coding
@@ -583,7 +583,7 @@ ls -l examples/guide/en/main.pdf
   \item In the VS Code remote terminal, launch your coding agent:
 
   \begin{code}[bash]
-cd ~/Huawei-doc-templates
+cd ~/huawei-doc-templates
 opencode          # or: codex, claude --bare, pi
   \end{code}
 
@@ -689,6 +689,9 @@ full command reference, see the template's README.md or run
 %  Changelog
 % =====================================================================
 \begin{changelog}
+  \changelogentry{2.7.1}{2026-08-17}{
+    \item Rename project repository to all lowercase (\texttt{huawei-doc-templates}).
+  }
   \changelogentry{2.7.0}{2026-08-12}{
     \item The \texttt{changelog} environment now emits its own section heading; \texttt{[nochangelog]} suppresses the heading and entries in one switch.
   }
