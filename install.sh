@@ -249,7 +249,7 @@ SKILL_COUNT=0
 
 for skill_file in "$SCRIPT_DIR"/templates/*/SKILL.md; do
     if [[ -f "$skill_file" ]]; then
-        skill_name=$(awk '/^name:/{print $2}' "$skill_file")
+        skill_name=$(awk 'FNR==1 && /^---$/{f=1; next} f && /^---$/{f=0} f && /^name:/{print $2; exit}' "$skill_file")
         skill_dst_dir="$GLOBAL_SKILLS_DIR/$skill_name"
         mkdir -p "$skill_dst_dir"
         cp "$skill_file" "$skill_dst_dir/SKILL.md"
@@ -399,7 +399,7 @@ compile_sample() {
             local pdf="${file%.tex}.pdf"
             local pages=$(pdfinfo "$pdf" 2>/dev/null | grep "^Pages:" | awk '{print $2}')
             log_ok "$label: ${pages:-?} pages"
-            latexmk -C "$file" 2>/dev/null
+            latexmk -c "$file" 2>/dev/null   # clean aux files only, preserve PDF
         else
             log_warn "$label compile failed — check $dir/${file%.tex}.log"
         fi

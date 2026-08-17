@@ -20,7 +20,7 @@
 %%    <any>       -> passed to the article class.
 %% =====================================================================
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{guide}[2026/08/08 Huawei Guide template]
+\ProvidesClass{guide}[2026/08/17 Huawei Guide template]
 
 % ---- Options --------------------------------------------------------
 \newif\if@indentbody \@indentbodyfalse
@@ -49,8 +49,6 @@
 \RequirePackage{fancyvrb}
 \RequirePackage{fvextra}
 \RequirePackage[most]{tcolorbox}
-\RequirePackage{ragged2e}
-\RequirePackage{needspace}
 \RequirePackage{booktabs}
 \RequirePackage{array}
 \RequirePackage{babel}
@@ -59,7 +57,7 @@
 \else
   \babelprovide[import,main]{english}
 \fi
-\RequirePackage[hidelinks]{hyperref}
+\RequirePackage{hyperref}
 \RequirePackage{caption}
 \captionsetup[figure]{font={small}, labelfont=bf, labelsep=colon}
 \captionsetup[table]{font={small}, labelfont=bf, labelsep=colon}
@@ -419,14 +417,17 @@
 
 % Code block from external file
 \newcommand{\codefile}[2][]{%
-  \VerbatimInput[fontsize=\fontsize{10}{13}\selectfont,
-   formatcom=\codefont\color{codetext},
-   frame=none,
-   backgroundcolor=codebg,
-   xleftmargin=0.7cm, xrightmargin=0.5cm,
-   breaklines=true, breakanywhere=true,
-   breaksymbolleft={}, breaksymbolright={},
-   breakanywheresymbolpre={}, breakanywheresymbolpost={}]{#2}%
+  \IfFileExists{#2}{%
+    \VerbatimInput[fontsize=\fontsize{10}{13}\selectfont,
+     formatcom=\codefont\color{codetext},
+     frame=none,
+     backgroundcolor=codebg,
+     xleftmargin=0.7cm, xrightmargin=0.5cm,
+     breaklines=true, breakanywhere=true,
+     breaksymbolleft={}, breaksymbolright={},
+     breakanywheresymbolpre={}, breakanywheresymbolpost={}]{#2}%
+  }{\ClassWarning{guide}{Code file "#2" not found.
+    Check the path (relative to TEXINPUTS) and that the file exists.}}%
 }
 
 % Inline code: \inlinecode{...}

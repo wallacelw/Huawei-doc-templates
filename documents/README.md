@@ -29,4 +29,6 @@ documents/
     +-- assets/            # project-specific images
 ```
 
-You can track your documents in git or ignore them — your choice.
+The `documents/` folder is gitignored by default (only `documents/README.md`
+is tracked). To force-track a document in version control, use
+`git add -f <path>`.
