@@ -109,6 +109,7 @@ and environment reference.
 ├── .vscode/
 │   └── settings.json        # VS Code + LaTeX Workshop config (latexmk recipe)
 ├── templates/
+│   ├── _base/               # shared formatting modules (huawei-*.sty)
 │   └── guide/               # self-contained template + skill
 │       ├── SKILL.md          # opencode skill + agent command reference
 │       ├── README.md         # template-specific details (brief)

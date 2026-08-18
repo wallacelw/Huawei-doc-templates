@@ -1,0 +1,56 @@
+%% huawei-tables.sty
+%% =====================================================================
+%%  hutable environment: full-grid tables with Huawei-red header bar
+%%  and alternating body row colors.
+%%  Extracted from guide.cls v2.0.0 decomposition.
+%% =====================================================================
+\ProvidesPackage{huawei-tables}[2026/08/19 Huawei table formatting]
+
+% =====================================================================
+%  TABLES — hutable environment
+%  Full-grid tables: red rules on all four sides and between every row,
+%  Huawei-red header bar (white bold text), and alternating white / light-gray
+%  body rows.
+%
+%  Usage:
+%    \begin{table}[H]
+%      \begin{hutable}{|l|l|l|}
+%        \rowcolor{huaweired} \thd{Col A} & \thd{Col B} & \thd{Col C} \\
+%        \tbody
+%        row 1 & value & value \\
+%        row 2 & value & value \\
+%      \end{hutable}
+%      \caption{Caption text.}
+%    \end{table}
+%
+%  - \centering\small is applied automatically (do not add it yourself).
+%  - Do not add \hline, \midrule, or \bottomrule — the environment draws the
+%    full grid (red rules on all four sides and between every row) for you.
+%  - Header row: \rowcolor{huaweired} + \thd{...} per cell (white bold on red),
+%    ended by \\.
+%  - After the header \\, add \tbody to start alternating body row colors
+%    (white / light gray).
+%  - Body rows: plain cells, black text on alternating white / codebg rows.
+%  - Every row MUST end with \\ (including the last) so the bottom border draws.
+%
+%  Implementation: a scoped redefinition of \@arraycr inserts an \hline after
+%  each row break to form the horizontal grid.  \hline (not booktabs \midrule)
+%  is required so colortbl \rowcolor fills the row background cleanly up to the
+%  rule — \midrule's \aboverulesep/\belowrulesep padding leaves uncolored gaps.
+%  The redefinition is local to the environment (begingroup/endgroup), so it
+%  does not affect other tabulars.  \par is emitted inside the centered group so
+%  the tabular is horizontally centered.
+\newenvironment{hutable}[1]{%
+  \par\medskip
+  \begingroup
+    \centering\small
+    \let\lg@arraycr\@arraycr
+    \def\@arraycr{\lg@arraycr\hline}%
+    \begin{tabular}{#1}\hline
+}{%
+    \end{tabular}\par
+  \endgroup
+  \medskip
+}
+
+\endinput

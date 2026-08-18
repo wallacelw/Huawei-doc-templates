@@ -1,0 +1,67 @@
+%% huawei-page.sty
+%% =====================================================================
+%%  Page layout: caption setup, float placement defaults, hyperref config,
+%%  header/footer (fancyhdr), and \startbody command.
+%%  Extracted from guide.cls v2.0.0 decomposition.
+%% =====================================================================
+\ProvidesPackage{huawei-page}[2026/08/19 Huawei page layout]
+
+% =====================================================================
+%  CAPTION SETUP
+% =====================================================================
+\captionsetup[figure]{font={small}, labelfont=bf, labelsep=colon}
+\captionsetup[table]{font={small}, labelfont=bf, labelsep=colon}
+
+% Float placement: force [H] (here, exactly) as the default for figure and
+% table floats so they appear in source order and never drift to a later page.
+% Requires the float package, which defines the H specifier.  Users can still
+% override a single float with an explicit [h], [t], [b], or [p].
+\renewcommand{\fps@figure}{H}
+\renewcommand{\fps@table}{H}
+
+% =====================================================================
+%  HYPERREF  (blue links, no underline)
+% =====================================================================
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,      % internal links (TOC) in black
+  urlcolor=linkblue,
+  citecolor=linkblue,
+  linktoc=all,
+  bookmarksnumbered=true,
+}
+
+% =====================================================================
+%  HEADER AND FOOTER
+% =====================================================================
+% Configurable header title: \setheadertitle{...}
+\newcommand{\lg@headertitle}{Huawei Cloud}
+\newcommand{\setheadertitle}[1]{\renewcommand{\lg@headertitle}{#1}}
+\newcommand{\lg@headerlogo}{common-assets/huawei-logo-header.png}
+\newcommand{\setheaderlogo}[1]{\renewcommand{\lg@headerlogo}{#1}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+% Header: logo (left) + title (center)
+% Footer: "Page N" (center)
+\fancyhead[L]{\raisebox{-0.35cm}[0pt][0pt]{%
+    \includegraphics[height=1.05cm]{\lg@headerlogo}}}
+\fancyhead[C]{\normalfont\fontsize{10}{12}\selectfont \lg@headertitle}
+\fancyfoot[C]{\normalfont\fontsize{10}{12}\selectfont \lg@pagelabel~\thepage}
+
+% Plain style: no header, page number in footer (for TOC, changelog)
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \renewcommand{\headrulewidth}{0pt}
+  \renewcommand{\footrulewidth}{0pt}
+  \fancyfoot[C]{\normalfont\fontsize{10}{12}\selectfont \lg@pagelabel~\thepage}
+}
+
+% =====================================================================
+%  BODY — resets page numbering
+% =====================================================================
+\newcommand{\startbody}{\clearpage\pagestyle{fancy}\thispagestyle{fancy}\setcounter{page}{1}}
+
+\endinput

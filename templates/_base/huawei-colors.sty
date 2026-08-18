@@ -1,0 +1,31 @@
+%% huawei-colors.sty
+%% =====================================================================
+%%  Huawei brand colors, table rule color, and table helpers (\thd, \tbody)
+%%  Extracted from guide.cls v2.0.0 decomposition.
+%% =====================================================================
+\ProvidesPackage{huawei-colors}[2026/08/19 Huawei brand colors]
+
+% =====================================================================
+%  COLORS
+% =====================================================================
+\definecolor{codebg}{HTML}{F6F8FA}   % code block background
+\definecolor{codetext}{HTML}{1F2328} % code text color
+\definecolor{linkblue}{HTML}{0000FF} % hyperlinks (no underline)
+\definecolor{huaweired}{HTML}{C7000B}% brand red (accents)
+\definecolor{ruleblack}{HTML}{000000} % horizontal rule color (black)
+\definecolor{warningbg}{HTML}{FFF8E1} % warning box background (light amber)
+\definecolor{warningfg}{HTML}{F57C00} % warning box border (amber)
+\definecolor{tipbg}{HTML}{E8F5E9}     % tip box background (light green)
+\definecolor{tipfg}{HTML}{2E7D32}     % tip box border (green)
+\definecolor{infobg}{HTML}{E3F2FD}    % info box background (light blue)
+\definecolor{infofg}{HTML}{1565C0}    % info box border (blue)
+
+% Table rules in Huawei red
+\arrayrulecolor{huaweired}
+% Table header cell: white bold text (for use with \rowcolor{huaweired})
+\newcommand{\thd}[1]{\textcolor{white}{\textbf{#1}}}
+% Table body: start alternating row colors (white / light gray).
+% Used inside hutable, right after the header row's \\.
+\newcommand{\tbody}{\rowcolors{2}{white}{codebg}}
+
+\endinput

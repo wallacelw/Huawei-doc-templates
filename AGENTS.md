@@ -111,6 +111,14 @@ approval. Changing them breaks existing documents and reproducibility.
   body rows). Do not reintroduce raw `tabular` + manual `\midrule`/`\bottomrule`
   in samples — use `hutable`.
 
+### L15. Shared formatting lives in `templates/_base/` modules
+- All template classes load shared `.sty` modules from `templates/_base/`.
+- Modules: huawei-colors, huawei-fonts, huawei-lang, huawei-page, huawei-tables,
+  huawei-code, huawei-callouts, huawei-images, huawei-changelog, huawei-shared.
+- Template-specific code (cover, TOC, section styling) stays in the template `.cls` file.
+- Do not add `\RequirePackage` calls inside `.sty` modules — all packages are loaded
+  by the template class file.
+
 ---
 
 ## Project structure
@@ -125,6 +133,10 @@ approval. Changing them breaks existing documents and reproducibility.
 +-- LICENSE                  # MIT
 +-- .vscode/settings.json    # latexmk as default recipe
 +-- templates/
+    +-- _base/               # shared formatting modules (huawei-*.sty)
+    │   +-- huawei-colors.sty
+    │   +-- huawei-fonts.sty
+    │   +-- ... (10 modules total)
     +-- guide/               # the guide template
         +-- SKILL.md          # opencode skill + agent reference
         +-- README.md         # human-readable docs
@@ -272,8 +284,9 @@ at the repo root registers `templates/` as a discovery path.
 
 ## File editing rules
 
-- **`guide.cls`** — the single source of truth for all formatting. Changes
-  here affect every document. Test with both samples before committing.
+- **`guide.cls`** — guide-specific formatting (cover, TOC, titles). Shared
+  formatting lives in `templates/_base/huawei-*.sty` modules. Changes here
+  affect every document. Test with both samples before committing.
 - **`.tex` files** — content only. No formatting overrides, no `\usepackage`,
   no `\renewcommand`. All look-and-feel comes from `guide.cls`. After any
   AI-assisted edit, bump version and add changelog entry (see L11).

@@ -1,0 +1,67 @@
+%% huawei-shared.sty
+%% =====================================================================
+%%  Shared document commands: objectives, prerequisites, stepbystep,
+%%  lists, note, weblink, menu, badge.
+%%  Extracted from guide.cls v2.0.0 decomposition.
+%% =====================================================================
+\ProvidesPackage{huawei-shared}[2026/08/19 Huawei shared commands]
+
+% =====================================================================
+%  OBJECTIVES / PREREQUISITES BLOCK  (closed by 1.5pt rule)
+% =====================================================================
+% Usage:
+%   \begin{objectives}
+%     \generalobjective{...}
+%     \prerequisites
+%       \item ...
+%   \end{objectives}
+\newcommand{\lg@label}[1]{\textbf{#1}}
+\newcommand{\generalobjective}[1]{\par\lg@label{\lg@generalobjectivelabel} #1\par}
+\newcommand{\objective}[1]{\par\lg@label{\lg@objectivelabel} #1\par}
+\newcommand{\stepbystep}{\par\lg@label{\lg@stepbysteplabel}\par}
+\newcommand{\prerequisites}{\par\lg@label{\lg@prerequisiteslabel}\par}
+
+\newenvironment{objectives}
+  {\par\medskip}
+  {\par\vspace{4pt}%
+   {\leftskip=0pt\relax\noindent{\color{ruleblack}\rule{\linewidth}{1.5pt}}}%
+   \par\vspace{10pt}}
+
+% =====================================================================
+%  LISTS  (bullets and numbered, in document style)
+% =====================================================================
+\setlist[itemize]{leftmargin=1.6em,topsep=2pt,itemsep=2pt,parsep=0pt}
+\setlist[enumerate]{leftmargin=1.8em,topsep=2pt,itemsep=2pt,parsep=0pt}
+
+% =====================================================================
+%  NOTE  (italic text)
+% =====================================================================
+\newcommand{\note}[1]{\par\medskip\textit{#1}\par\medskip}
+
+% Blue text link (no underline), preserving clickable destination
+\newcommand{\weblink}[2]{\href{#1}{\textcolor{linkblue}{#2}}}
+
+% Menu path: \menu{VPC, Security Groups} -> **VPC** -> **Security Groups**
+% Uses etoolbox's \forcsvlist (loaded by tcolorbox[most])
+\newtoks\lg@menutoks
+\newif\iflg@menufirst
+\newcommand{\menu}[1]{%
+  \lg@menufirsttrue
+  \lg@menutoks={}%
+  \forcsvlist{\lg@menuitem}{#1}%
+  \the\lg@menutoks}
+\newcommand{\lg@menuitem}[1]{%
+  \iflg@menufirst\else
+    \lg@menutoks=\expandafter{\the\lg@menutoks\ $\rightarrow$\ }%
+  \fi
+  \lg@menufirstfalse
+  \lg@menutoks=\expandafter{\the\lg@menutoks\textbf{#1}}}
+
+% =====================================================================
+%  BADGE  (inline colored label)
+% =====================================================================
+% Usage: \badge{New}  -> red label with white text
+\newcommand{\badge}[1]{%
+  \colorbox{huaweired}{\textcolor{white}{\footnotesize\bfseries\strut~#1~}}}
+
+\endinput

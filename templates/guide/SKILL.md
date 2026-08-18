@@ -21,14 +21,14 @@ hard-coded to the Huawei house style.
 Before creating or editing any document, read these files to load the full
 project context:
 
-1. **`templates/guide/guide.cls`** — the class file. This is the single source
-   of truth for all formatting: commands, environments, colors, fonts, page
-   layout, callout boxes, table styling, and cover page. Every command and
-   environment available to documents is defined here.
+1. **`templates/guide/guide.cls`** — the class file. Shared formatting lives in
+   `templates/_base/huawei-*.sty` modules. Guide-specific formatting (cover, TOC,
+   titles) lives in `guide.cls`. Every command and environment available to
+   documents is defined across these files.
 2. **`README.md`** (repo root) — project setup, compilation instructions,
    install steps, and project layout. Needed to understand the toolchain and
    folder conventions.
-3. **`AGENTS.md`** (repo root) — locked decisions (L1–L14), file editing
+3. **`AGENTS.md`** (repo root) — locked decisions (L1–L15), file editing
    rules, versioning workflow, and project standards. These are mandatory
    constraints that must not be violated.
 
@@ -54,7 +54,7 @@ up in the class file and this SKILL.md.
        From `documents/<project-name>/`, the relative path to
        `templates/guide/` is `../../templates/guide/`:
        ```perl
-       $ENV{TEXINPUTS} = "../../templates/guide/:" . ($ENV{TEXINPUTS} || "");
+        $ENV{TEXINPUTS} = "../../templates/_base/:../../templates/guide/:" . ($ENV{TEXINPUTS} || "");
        $pdf_mode = 5;
        $xelatex = 'xelatex -interaction=nonstopmode %O %S';
        ```
@@ -95,7 +95,7 @@ up in the class file and this SKILL.md.
 
 ```
 templates/guide/
-├── guide.cls          # the class — ALL formatting lives here
+├── guide.cls          # guide-specific formatting (cover, TOC, titles)
 ├── README.md           # human docs (brief — see root README for setup)
 ├── SKILL.md            # this file (opencode skill)
 ├── .latexmkrc          # latexmk config (XeLaTeX by default)
@@ -130,9 +130,10 @@ looks in the project's own `assets/` folder first, then falls back to
 `common-assets/` in the template directory (via TEXINPUTS). Logos default to
 `common-assets/` since they are template-level shared assets.
 
-**Rule of thumb:** content/structure goes in `.tex` files; look-and-feel goes
-in `guide.cls`. Do not inline formatting overrides in the document unless
-the user asks.
+**Rule of thumb:** content/structure goes in `.tex` files; shared look-and-feel
+goes in `templates/_base/huawei-*.sty` modules; guide-specific formatting goes in
+`guide.cls`. Do not inline formatting overrides in the document unless the user
+asks.
 
 ---
 
@@ -452,7 +453,7 @@ rendered, but the content remains in the `.tex` file for future reference.
 
 ---
 
-## Colors (defined in `guide.cls`, reusable via `\textcolor{name}{...}`)
+## Colors (defined in `templates/_base/huawei-colors.sty`, reusable via `\textcolor{name}{...}`)
 | Name | Hex | Use |
 |---|---|---|
 | `codebg` | `#F6F8FA` | Code block background |
@@ -503,7 +504,7 @@ The project's `.latexmkrc` sets `TEXINPUTS` to the template directory so
 ## Customization pointers (when the user asks to change the look)
 - **Logos:** replace files in `common-assets/` keeping the names, or use
   `\setheaderlogo{path}` / `\setcoverlogo{path}` in the preamble.
-- **Colors:** edit the `\definecolor` block at the top of `guide.cls`.
+- **Colors:** edit the `\definecolor` block in `templates/_base/huawei-colors.sty`.
 - **Sizes/spacing:** each concern is in a commented section of
   `guide.cls` (`TITLES`, `CODE`, `HEADER AND FOOTER`, etc.) — find the section,
   edit there.

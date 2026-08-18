@@ -1,0 +1,25 @@
+%% huawei-callouts.sty
+%% =====================================================================
+%%  Callout box environments: warning, tip, infobox.
+%%  Extracted from guide.cls v2.0.0 decomposition.
+%% =====================================================================
+\ProvidesPackage{huawei-callouts}[2026/08/19 Huawei callout boxes]
+
+% =====================================================================
+%  CALLOUT BOXES  (warning, tip, infobox)
+% =====================================================================
+% Usage:
+%   \begin{warning} ... \end{warning}   — caution / warning (amber)
+%   \begin{tip}     ... \end{tip}       — suggestion / tip (green)
+%   \begin{infobox} ... \end{infobox}   — additional info (blue)
+\newcommand{\lg@callout}[5]{%
+  \newtcolorbox{#1}{colback=#2, colframe=#3,
+    before upper={\textbf{\color{#4}#5}\par\smallskip},
+    boxrule=0pt, leftrule=3pt, arc=0pt, outer arc=0pt,
+    left=8pt, right=8pt, top=6pt, bottom=6pt,
+    before skip=6pt, after skip=6pt, breakable, enhanced jigsaw}}
+\lg@callout{warning}{warningbg}{warningfg}{huaweired}{\lg@warninglabel}
+\lg@callout{tip}{tipbg}{tipfg}{tipfg}{\lg@tiplabel}
+\lg@callout{infobox}{infobg}{infofg}{infofg}{\lg@infolabel}
+
+\endinput

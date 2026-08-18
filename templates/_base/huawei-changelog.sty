@@ -1,0 +1,66 @@
+%% huawei-changelog.sty
+%% =====================================================================
+%%  Version commands (\setdocversion, \setdocdate), changelog environment,
+%%  \changelogentry, and [nochangelog] disable block.
+%%  Extracted from guide.cls v2.0.0 decomposition.
+%% =====================================================================
+\ProvidesPackage{huawei-changelog}[2026/08/19 Huawei changelog]
+
+% =====================================================================
+%  VERSION / DATE  (used on cover page and in changelog)
+% =====================================================================
+\newcommand{\lg@docversion}{}
+\newcommand{\setdocversion}[1]{\renewcommand{\lg@docversion}{#1}}
+\newcommand{\lg@docdate}{\today}
+\newcommand{\setdocdate}[1]{\renewcommand{\lg@docdate}{#1}}
+
+% =====================================================================
+%  CHANGELOG / VERSIONING
+% =====================================================================
+% Usage:
+%   \setdocversion{1.0.0}       % shows "v1.0.0" on cover
+%   \setdocdate{2026-08-05}     % optional; default = \today
+%
+%   \begin{changelog}
+%     \changelogentry{1.0.0}{2026-08-05}{
+%       \item Initial version
+%       \item Added ECS provisioning
+%     }
+%     \changelogentry{0.9.0}{2025-07-15}{
+%       \item Draft
+%     }
+%   \end{changelog}
+%
+%  The environment emits the section heading (language-aware: "Changelog" /
+%  "Histórico de versões") automatically -- do not add a \section before it.
+%  [nochangelog] suppresses the heading and all entries in one switch.
+\newenvironment{changelog}{%
+  \section{\lg@changelogtitle}%
+  \par\medskip
+  \thispagestyle{plain}\pagestyle{plain}%
+  \noindent{\color{ruleblack}\rule{\linewidth}{0.5pt}}\par
+  \vspace{6pt}
+}{%
+  \par\medskip
+  \noindent{\color{ruleblack}\rule{\linewidth}{0.5pt}}\par
+  \medskip
+  \pagestyle{fancy}%
+}
+\newcommand{\changelogentry}[3]{%
+  \par\smallskip
+  \noindent\textbf{#1}\hfill\textit{#2}\par\nobreak\vspace{2pt}
+  \begingroup\leftskip=1.2cm\relax
+  \begin{itemize}[leftmargin=1.2em,topsep=0pt,itemsep=1pt,parsep=0pt]
+    #3
+  \end{itemize}
+  \endgroup
+}
+
+% Disable changelog when [nochangelog] option is active.
+% The environment and entries become no-ops (content is absorbed, nothing rendered).
+\if@changelog\else
+  \renewenvironment{changelog}{}{}
+  \renewcommand{\changelogentry}[3]{\ignorespaces}
+\fi
+
+\endinput

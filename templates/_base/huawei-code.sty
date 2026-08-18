@@ -1,0 +1,51 @@
+%% huawei-code.sty
+%% =====================================================================
+%%  Code environments and commands: code, codefile, inlinecode, param.
+%%  Extracted from guide.cls v2.0.0 decomposition.
+%% =====================================================================
+\ProvidesPackage{huawei-code}[2026/08/19 Huawei code formatting]
+
+% =====================================================================
+%  CODE  (fancyvrb + fvextra — clean PDF copy-paste)
+% =====================================================================
+% No-op keys for language hints ([bash], [python], etc.) — ignored,
+% kept for backward compatibility with existing documents.
+\newcommand{\lg@deflangkey}[1]{\define@key{FV}{#1}[unused]{}}
+\forcsvlist{\lg@deflangkey}{bash,sh,shell,python,Python,json,yaml,xml,html,javascript,js,sql,text,ini,conf}
+
+% Code block: #F6F8FA background, no border, left indented
+% Uses fancyvrb (not listings) for clean copy-paste in PDF.
+% listings processes character by character -> xdvipdfmx writes each
+% one as a separate text operation -> PDF readers insert spaces.
+% fancyvrb typesets line by line -> contiguous text in PDF -> clean copy.
+\DefineVerbatimEnvironment{code}{Verbatim}
+{fontsize=\fontsize{10}{13}\selectfont, formatcom=\codefont\color{codetext},
+ frame=none,
+ backgroundcolor=codebg,
+ xleftmargin=0.7cm, xrightmargin=0.5cm,
+ breaklines=true, breakanywhere=true,
+ breaksymbolleft={}, breaksymbolright={},
+ breakanywheresymbolpre={}, breakanywheresymbolpost={},
+}
+
+% Code block from external file
+\newcommand{\codefile}[2][]{%
+  \IfFileExists{#2}{%
+    \VerbatimInput[fontsize=\fontsize{10}{13}\selectfont,
+     formatcom=\codefont\color{codetext},
+     frame=none,
+     backgroundcolor=codebg,
+     xleftmargin=0.7cm, xrightmargin=0.5cm,
+     breaklines=true, breakanywhere=true,
+     breaksymbolleft={}, breaksymbolright={},
+     breakanywheresymbolpre={}, breakanywheresymbolpost={}]{#2}%
+  }{\PackageWarning{huawei-code}{Code file "#2" not found.
+    Check the path (relative to TEXINPUTS) and that the file exists.}}%
+}
+
+% Inline code: \inlinecode{...}
+\newcommand{\inlinecode}[1]{{\codefont\fontsize{10}{12}\selectfont\color{codetext}#1}}
+% File/parameter name in text (italic)
+\newcommand{\param}[1]{\textit{#1}}
+
+\endinput

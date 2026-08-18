@@ -87,13 +87,16 @@ and environments (`\generalobjective`, `\prerequisites`, `\stepbystep`, `code`,
 | Tip box | `#E8F5E9` bg / `#2E7D32` border |
 | Info box | `#E3F2FD` bg / `#1565C0` border |
 
-Colors are defined in `guide.cls` and reusable via `\textcolor{name}{...}`.
+Colors are defined in `templates/_base/huawei-colors.sty` and fonts in
+`templates/_base/huawei-fonts.sty`. Both are reusable via `\textcolor{name}{...}`
+and `\codefont` respectively.
 
 ## Customization
 
 - **Logos:** replace files in `common-assets/` keeping the names, or use
   `\setheaderlogo{path}` / `\setcoverlogo{path}` in the preamble.
-- **Colors:** edit the `\definecolor` block at the top of `guide.cls`.
+- **Colors:** edit the `\definecolor` block in `templates/_base/huawei-colors.sty`.
+- **Fonts:** edit font setup in `templates/_base/huawei-fonts.sty`.
 - **Sizes/spacing:** each concern is in a commented section of `guide.cls`
   (`TITLES`, `CODE`, `HEADER AND FOOTER`, etc.) — find the section and edit there.
 

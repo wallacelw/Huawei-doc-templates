@@ -143,6 +143,7 @@ $SUDO apt-get install -y \
     fonts-liberation \
     fonts-cascadia-code \
     poppler-utils \
+    pandoc \
     2>&1 | tail -3
 
 log_done "TeX Live packages installed"
@@ -212,6 +213,28 @@ log_step "Updating font cache"
 fc-cache -f || log_warn "fc-cache failed — font discovery may be incomplete"
 log_ok "Font cache updated"
 
+# ── Install shared LaTeX modules to TDS (texmf-local) ──
+log_step "Installing Huawei shared modules (TDS)"
+
+TEXMF_LOCAL=$(kpsewhich -var-value TEXMFLOCAL 2>/dev/null)
+HUAWEI_STY_DIR="$TEXMF_LOCAL/tex/latex/huawei"
+
+if [[ -n "$TEXMF_LOCAL" ]] && [[ -d "$TEXMF_LOCAL" ]]; then
+    $SUDO mkdir -p "$HUAWEI_STY_DIR"
+    MODULE_COUNT=0
+    for sty_file in "$SCRIPT_DIR"/templates/_base/huawei-*.sty; do
+        if [[ -f "$sty_file" ]]; then
+            $SUDO cp "$sty_file" "$HUAWEI_STY_DIR/"
+            MODULE_COUNT=$((MODULE_COUNT + 1))
+        fi
+    done
+    $SUDO texhash 2>/dev/null
+    log_done "Installed $MODULE_COUNT modules → $HUAWEI_STY_DIR"
+else
+    log_warn "TEXMFLOCAL not found — modules will be found via TEXINPUTS instead"
+    log_dim "Documents still compile if .latexmkrc includes templates/_base/ in TEXINPUTS"
+fi
+
 # ── Verify toolchain ──
 log_step "Verifying toolchain and fonts"
 
@@ -226,6 +249,13 @@ verify() {
 
 verify xelatex
 verify latexmk
+
+log_step "Verifying pandoc"
+if command -v pandoc &>/dev/null; then
+    log_done "pandoc $(pandoc --version | head -1)"
+else
+    log_warn "pandoc not found — DOCX/MD/HTML output unavailable (PDF still works)"
+fi
 
 # Font checks
 check_font() {
