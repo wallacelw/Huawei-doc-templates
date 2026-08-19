@@ -19,11 +19,6 @@ PT_DIR   = examples/guide/pt
 EN_DIR   = examples/guide/en
 SG_DIR   = examples/setup-guide
 
-PANDOC      = pandoc
-LUA_FILTER  = templates/guide/guide-pandoc.lua
-REF_DOCX    = templates/guide/guide-reference.docx
-HTML_TMPL   = templates/guide/guide-template.html
-
 all: samples examples all-formats
 
 # ── Interactive build menu ──
@@ -60,30 +55,17 @@ project:
 		cd $(DIR) && latexmk $(FILE); \
 	fi
 
-# ── Multi-format output ──────────────────────────────────────────────
+# ── Multi-format output (delegates to build.sh) ──
+md-pt:     ; ./build.sh --md examples/guide/pt
+md-en:     ; ./build.sh --md examples/guide/en
+docx-pt:   ; ./build.sh --docx examples/guide/pt
+docx-en:   ; ./build.sh --docx examples/guide/en
+html-pt:   ; ./build.sh --html examples/guide/pt
+html-en:   ; ./build.sh --html examples/guide/en
 
-docx-pt:
-	cd examples/guide/pt && $(PANDOC) -f latex+raw_tex --lua-filter=../../../$(LUA_FILTER) --reference-doc=../../../$(REF_DOCX) -t docx main.tex -o main.docx
-
-docx-en:
-	cd examples/guide/en && $(PANDOC) -f latex+raw_tex --lua-filter=../../../$(LUA_FILTER) --reference-doc=../../../$(REF_DOCX) -t docx main.tex -o main.docx
-
-md-pt:
-	cd examples/guide/pt && $(PANDOC) -f latex+raw_tex --lua-filter=../../../$(LUA_FILTER) -t markdown --wrap=none main.tex -o main.md
-
-md-en:
-	cd examples/guide/en && $(PANDOC) -f latex+raw_tex --lua-filter=../../../$(LUA_FILTER) -t markdown --wrap=none main.tex -o main.md
-
-html-pt:
-	cd examples/guide/pt && $(PANDOC) -f latex+raw_tex --lua-filter=../../../$(LUA_FILTER) --template=../../../$(HTML_TMPL) -s -t html5 main.tex -o main.html
-
-html-en:
-	cd examples/guide/en && $(PANDOC) -f latex+raw_tex --lua-filter=../../../$(LUA_FILTER) --template=../../../$(HTML_TMPL) -s -t html5 main.tex -o main.html
-
+md:   md-pt md-en
 docx: docx-pt docx-en
-md: md-pt md-en
 html: html-pt html-en
-
 all-formats: docx md html
 
 # ── Clean targets ──

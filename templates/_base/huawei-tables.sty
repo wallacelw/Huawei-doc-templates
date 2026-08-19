@@ -6,6 +6,12 @@
 %% =====================================================================
 \ProvidesPackage{huawei-tables}[2026/08/19 Huawei table formatting]
 
+% Table header cell: white bold text (for use with \rowcolor{huaweired})
+\newcommand{\thd}[1]{\textcolor{white}{\textbf{#1}}}
+% Table body: start alternating row colors (white / light gray).
+% Used inside hutable, right after the header row's \\.
+\newcommand{\tbody}{\rowcolors{2}{white}{codebg}}
+
 % =====================================================================
 %  TABLES — hutable environment
 %  Full-grid tables: red rules on all four sides and between every row,

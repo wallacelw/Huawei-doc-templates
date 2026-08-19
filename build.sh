@@ -36,7 +36,6 @@ FLAG_PDF=false
 FLAG_DOCX=false
 FLAG_MD=false
 FLAG_HTML=false
-FLAG_ALL=false
 PROJECT_DIR=""
 
 # ── Parse arguments ──────────────────────────────────────────────────────
@@ -46,7 +45,7 @@ while [[ $# -gt 0 ]]; do
         --docx)    FLAG_DOCX=true; shift ;;
         --md)      FLAG_MD=true;   shift ;;
         --html)    FLAG_HTML=true; shift ;;
-        --all)     FLAG_ALL=true;  shift ;;
+        --all)     FLAG_PDF=true; FLAG_DOCX=true; FLAG_MD=true; FLAG_HTML=true; shift ;;
         -h|--help)
             echo "Usage: ./build.sh [OPTIONS] [PROJECT-DIR]"
             echo ""
@@ -135,7 +134,7 @@ check_deps() {
         echo "  Install: sudo apt install texlive-xetex  (or equivalent for your OS)" >&2
         missing=true
     fi
-    if [ "$FLAG_DOCX" = true ] || [ "$FLAG_MD" = true ] || [ "$FLAG_HTML" = true ] || [ "$FLAG_ALL" = true ]; then
+    if [ "$FLAG_DOCX" = true ] || [ "$FLAG_MD" = true ] || [ "$FLAG_HTML" = true ]; then
         if ! command -v pandoc &>/dev/null; then
             echo "Error: pandoc is not installed." >&2
             echo "  Install: sudo apt install pandoc  (or https://pandoc.org/installing.html)" >&2
@@ -226,7 +225,7 @@ declare -a RESULTS_OK=()
 declare -a RESULTS_FAIL=()
 
 generate_pdf() {
-    echo "Generating PDF..."
+    echo "  Generating PDF..."
     local output="${PROJECT_DIR}/${BASENAME}.pdf"
     if (cd "$PROJECT_DIR" && latexmk "$TEX_FILE") 2>&1; then
         # Count pages
@@ -244,78 +243,34 @@ generate_pdf() {
     fi
 }
 
-generate_docx() {
-    echo "Generating DOCX..."
-    local output="${PROJECT_DIR}/${BASENAME}.docx"
-    if (cd "$PROJECT_DIR" && pandoc \
-        -f latex+raw_tex \
+generate_pandoc_format() {
+    local label=$1 fmt=$2 ext=$3; shift 3
+    local extra_args=("$@")
+    local out="${BASENAME}.${ext}"
+    echo "  Generating ${label}..."
+    (cd "$PROJECT_DIR" && pandoc -f latex+raw_tex \
         --lua-filter="$LUA_FILTER" \
-        --reference-doc="$REF_DOCX" \
-        -t docx \
-        "$TEX_FILE" \
-        -o "${BASENAME}.docx") 2>&1; then
+        "${extra_args[@]}" \
+        -t "$fmt" "$TEX_FILE" -o "$out") 2>&1
+    if [ $? -eq 0 ]; then
         local size=""
+        local output="${PROJECT_DIR}/${BASENAME}.${ext}"
         if [ -f "$output" ]; then
             size="$(du -k "$output" 2>/dev/null | cut -f1)"
         fi
         if [ -n "$size" ]; then
-            RESULTS_OK+=("DOCX:${REL_DIR}/${BASENAME}.docx (${size} KB)")
+            RESULTS_OK+=("${label}:${REL_DIR}/${BASENAME}.${ext} (${size} KB)")
         else
-            RESULTS_OK+=("DOCX:${REL_DIR}/${BASENAME}.docx")
+            RESULTS_OK+=("${label}:${REL_DIR}/${BASENAME}.${ext}")
         fi
     else
-        RESULTS_FAIL+=("DOCX:pandoc failed")
+        RESULTS_FAIL+=("${label}:pandoc failed")
     fi
 }
 
-generate_md() {
-    echo "Generating Markdown..."
-    local output="${PROJECT_DIR}/${BASENAME}.md"
-    if (cd "$PROJECT_DIR" && pandoc \
-        -f latex+raw_tex \
-        --lua-filter="$LUA_FILTER" \
-        -t markdown \
-        --wrap=none \
-        "$TEX_FILE" \
-        -o "${BASENAME}.md") 2>&1; then
-        local size=""
-        if [ -f "$output" ]; then
-            size="$(du -k "$output" 2>/dev/null | cut -f1)"
-        fi
-        if [ -n "$size" ]; then
-            RESULTS_OK+=("MD:${REL_DIR}/${BASENAME}.md (${size} KB)")
-        else
-            RESULTS_OK+=("MD:${REL_DIR}/${BASENAME}.md")
-        fi
-    else
-        RESULTS_FAIL+=("Markdown:pandoc failed")
-    fi
-}
-
-generate_html() {
-    echo "Generating HTML..."
-    local output="${PROJECT_DIR}/${BASENAME}.html"
-    if (cd "$PROJECT_DIR" && pandoc \
-        -f latex+raw_tex \
-        --lua-filter="$LUA_FILTER" \
-        --template="$HTML_TMPL" \
-        -s \
-        -t html5 \
-        "$TEX_FILE" \
-        -o "${BASENAME}.html") 2>&1; then
-        local size=""
-        if [ -f "$output" ]; then
-            size="$(du -k "$output" 2>/dev/null | cut -f1)"
-        fi
-        if [ -n "$size" ]; then
-            RESULTS_OK+=("HTML:${REL_DIR}/${BASENAME}.html (${size} KB)")
-        else
-            RESULTS_OK+=("HTML:${REL_DIR}/${BASENAME}.html")
-        fi
-    else
-        RESULTS_FAIL+=("HTML:pandoc failed")
-    fi
-}
+generate_docx() { generate_pandoc_format "DOCX" docx docx --reference-doc="$REF_DOCX"; }
+generate_md()   { generate_pandoc_format "Markdown" markdown md; }
+generate_html() { generate_pandoc_format "HTML" html5 html --template="$HTML_TMPL" -s; }
 
 # ── Summary ──────────────────────────────────────────────────────────────
 show_summary() {
@@ -324,33 +279,26 @@ show_summary() {
     echo "Generation Complete"
     echo "========================================"
 
+    pad_label() {
+        case "$1" in
+            PDF)      echo "PDF:     " ;;
+            DOCX)     echo "DOCX:    " ;;
+            Markdown) echo "Markdown:" ;;
+            HTML)     echo "HTML:    " ;;
+            *)        echo "${1}: " ;;
+        esac
+    }
+
     for entry in "${RESULTS_OK[@]}"; do
         local label="${entry%%:*}"
         local detail="${entry#*:}"
-        # Pad label for alignment
-        local padded
-        case "$label" in
-            PDF)      padded="PDF:     " ;;
-            DOCX)     padded="DOCX:    " ;;
-            MD)       padded="Markdown:" ;;
-            HTML)     padded="HTML:    " ;;
-            *)        padded="${label}: " ;;
-        esac
-        printf "${GREEN}✓${RESET} %s %s\n" "$padded" "$detail"
+        printf "${GREEN}✓${RESET} %s %s\n" "$(pad_label "$label")" "$detail"
     done
 
     for entry in "${RESULTS_FAIL[@]}"; do
         local label="${entry%%:*}"
         local detail="${entry#*:}"
-        local padded
-        case "$label" in
-            PDF)      padded="PDF:     " ;;
-            DOCX)     padded="DOCX:    " ;;
-            MD)       padded="Markdown:" ;;
-            HTML)     padded="HTML:    " ;;
-            *)        padded="${label}: " ;;
-        esac
-        printf "${RED}✗${RESET} %s %s\n" "$padded" "$detail"
+        printf "${RED}✗${RESET} %s %s\n" "$(pad_label "$label")" "$detail"
     done
 
     echo ""
@@ -360,16 +308,8 @@ show_summary() {
 
 # If no format flags set, go interactive
 if [ "$FLAG_PDF" = false ] && [ "$FLAG_DOCX" = false ] && \
-   [ "$FLAG_MD" = false ] && [ "$FLAG_HTML" = false ] && [ "$FLAG_ALL" = false ]; then
+   [ "$FLAG_MD" = false ] && [ "$FLAG_HTML" = false ]; then
     interactive_menu
-fi
-
-# Expand --all
-if [ "$FLAG_ALL" = true ]; then
-    FLAG_PDF=true
-    FLAG_DOCX=true
-    FLAG_MD=true
-    FLAG_HTML=true
 fi
 
 # Check dependencies for selected formats

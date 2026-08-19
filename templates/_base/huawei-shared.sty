@@ -15,11 +15,10 @@
 %     \prerequisites
 %       \item ...
 %   \end{objectives}
-\newcommand{\lg@label}[1]{\textbf{#1}}
-\newcommand{\generalobjective}[1]{\par\lg@label{\lg@generalobjectivelabel} #1\par}
-\newcommand{\objective}[1]{\par\lg@label{\lg@objectivelabel} #1\par}
-\newcommand{\stepbystep}{\par\lg@label{\lg@stepbysteplabel}\par}
-\newcommand{\prerequisites}{\par\lg@label{\lg@prerequisiteslabel}\par}
+\newcommand{\generalobjective}[1]{\par\textbf{\lg@generalobjectivelabel} #1\par}
+\newcommand{\objective}[1]{\par\textbf{\lg@objectivelabel} #1\par}
+\newcommand{\stepbystep}{\par\textbf{\lg@stepbysteplabel}\par}
+\newcommand{\prerequisites}{\par\textbf{\lg@prerequisiteslabel}\par}
 
 \newenvironment{objectives}
   {\par\medskip}

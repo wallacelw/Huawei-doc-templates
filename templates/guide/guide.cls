@@ -155,7 +155,7 @@
 \newcommand{\lg@coverlogo}{common-assets/huawei-logo-cover.png}
 \newcommand{\setcoverlogo}[1]{\renewcommand{\lg@coverlogo}{#1}}
 % Compilation time from \time primitive (minutes since midnight, respects TZ)
-\providecommand{\two@digits}[1]{\ifnum#1<10 0\fi\number#1}
+% \two@digits is provided by the LaTeX kernel
 \newcount\lg@hour
 \newcount\lg@min
 \newcount\lg@tmp

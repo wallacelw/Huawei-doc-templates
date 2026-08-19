@@ -1,61 +1,44 @@
 --- guide-pandoc.lua
---- =====================================================================
----  Pandoc Lua filter for the Huawei guide.cls template.
----  Translates custom commands and environments to DOCX, Markdown, and HTML5.
+--- Pandoc Lua filter for the Huawei guide.cls template.
+--- Translates custom commands and environments to DOCX, Markdown, and HTML5.
 ---
----  Usage:
----    pandoc --lua-filter=guide-pandoc.lua -f latex+raw_tex -t docx  input.tex
----    pandoc --lua-filter=guide-pandoc.lua -f latex+raw_tex -t markdown input.tex
----    pandoc --lua-filter=guide-pandoc.lua -f latex+raw_tex -t html5  input.tex
+--- Usage:
+---   pandoc --lua-filter=guide-pandoc.lua -f latex+raw_tex -t docx  input.tex
+---   pandoc --lua-filter=guide-pandoc.lua -f latex+raw_tex -t markdown input.tex
+---   pandoc --lua-filter=guide-pandoc.lua -f latex+raw_tex -t html5  input.tex
 ---
----  Requires pandoc >= 3.0 (Table Cell/Row API).
----  Most features work with pandoc >= 2.9; hutable requires >= 3.0.
---- =====================================================================
+--- Requires pandoc >= 3.0 (Table Cell/Row API).
+--- Most features work with pandoc >= 2.9; hutable requires >= 3.0.
+--- Do NOT add a return table at the end — global functions work.
 
--- =====================================================================
---  Language labels (English / Portuguese)
--- =====================================================================
+-- Language labels (English / Portuguese)
 local labels = {
   en = {
-    warning     = "Important",
-    tip         = "Tip",
-    infobox     = "Info",
-    genobj      = "General Objective:",
-    obj         = "Objective:",
-    prereq      = "Prerequisites:",
-    stepbystep  = "Step by step:",
-    changelog   = "Changelog",
+    warning = "Important", tip = "Tip", infobox = "Info",
+    genobj = "General Objective:", obj = "Objective:",
+    prereq = "Prerequisites:", stepbystep = "Step by step:",
+    changelog = "Changelog",
   },
   pt = {
-    warning     = "Importante",
-    tip         = "Dica",
-    infobox     = "Informação",
-    genobj      = "Objetivo Geral:",
-    obj         = "Objetivo:",
-    prereq      = "Pré-requisitos:",
-    stepbystep  = "Passo a passo:",
-    changelog   = "Histórico de versões",
+    warning = "Importante", tip = "Dica", infobox = "Informação",
+    genobj = "Objetivo Geral:", obj = "Objetivo:",
+    prereq = "Pré-requisitos:", stepbystep = "Passo a passo:",
+    changelog = "Histórico de versões",
   },
 }
 
 -- Active language: "en" or "pt" (set by documentclass option detection)
 local lang = "en"
-
--- Convenience: return the label for the current language
-local function L(key)
-  return labels[lang][key] or key
-end
+local function L(key) return labels[lang][key] or key end
 
 -- =====================================================================
 --  Utility helpers
 -- =====================================================================
 
---- Trim leading/trailing whitespace from a string.
 local function trim(s)
   return (s:gsub("^%s+", ""):gsub("%s+$", ""))
 end
 
---- Read a file's contents, returning nil on failure.
 local function read_file(path)
   local f = io.open(path, "r")
   if not f then return nil end
@@ -68,46 +51,35 @@ end
 --- Returns (content, end_pos) or (nil, nil).
 --- Handles nested braces: \foo{a{b}c} → "a{b}c"
 local function parse_brace_arg(text, start)
-  local depth = 1  -- start at 1: we are already inside the opening brace
+  local depth = 1
   local i = start
   while i <= #text do
     local c = text:sub(i, i)
-    if c == "{" then
-      depth = depth + 1
+    if c == "{" then depth = depth + 1
     elseif c == "}" then
       depth = depth - 1
-      if depth == 0 then
-        return text:sub(start, i - 1), i
-      end
+      if depth == 0 then return text:sub(start, i - 1), i end
     elseif c == "\\" and i < #text then
-      -- Skip the next character after backslash (escaped char or command)
-      i = i + 1
+      i = i + 1 -- skip next char after backslash (escaped char or command)
     end
     i = i + 1
   end
   return nil, nil
 end
 
---- Find a command in text: \cmdname{arg}. Returns arg content or nil.
 local function find_cmd_arg(text, cmd)
-  local pattern = "\\" .. cmd .. "%s*{"
-  local start = text:find(pattern)
+  local start = text:find("\\" .. cmd .. "%s*{")
   if not start then return nil end
-  -- Find the opening brace
   local brace_pos = text:find("{", start)
   if not brace_pos then return nil end
-  local content, _ = parse_brace_arg(text, brace_pos + 1)
-  return content
+  return parse_brace_arg(text, brace_pos + 1)
 end
 
---- Find all occurrences of \cmd{arg} in text.
---- Returns a table of arg strings.
 local function find_all_cmd_args(text, cmd)
   local results = {}
-  local pattern = "\\" .. cmd .. "%s*{"
   local pos = 1
   while true do
-    local start = text:find(pattern, pos)
+    local start = text:find("\\" .. cmd .. "%s*{", pos)
     if not start then break end
     local brace_pos = text:find("{", start)
     if not brace_pos then break end
@@ -115,15 +87,52 @@ local function find_all_cmd_args(text, cmd)
     if content then
       table.insert(results, content)
       pos = (end_pos or brace_pos) + 1
-    else
-      break
-    end
+    else break end
   end
   return results
 end
 
+--- Split a table row string on & with brace-depth tracking.
+--- Pads or trims to exactly num_cols cells. Returns a table of cell strings.
+local function split_row(row_str, num_cols)
+  local cells = {}
+  local cell_start = 1
+  local depth = 0
+  for i = 1, #row_str do
+    local c = row_str:sub(i, i)
+    if c == "{" then depth = depth + 1
+    elseif c == "}" then depth = depth - 1
+    elseif c == "&" and depth == 0 then
+      table.insert(cells, trim(row_str:sub(cell_start, i - 1)))
+      cell_start = i + 1
+    end
+  end
+  table.insert(cells, trim(row_str:sub(cell_start)))
+  while #cells < num_cols do table.insert(cells, "") end
+  while #cells > num_cols do table.remove(cells) end
+  return cells
+end
+
+-- Commands to strip from the document body (preamble setters + structural)
+local strip_commands = {
+  setguidetitle = true, setheadertitle = true, setcovertext = true,
+  setheaderlogo = true, setcoverlogo = true, setdocversion = true,
+  setdocdate = true, makecover = true, maketoc = true, startbody = true,
+}
+
+--- Check if a raw LaTeX string is a strip command.
+local function is_strip_cmd(text)
+  for cmd, _ in pairs(strip_commands) do
+    if text:match("^%s*\\" .. cmd .. "%s*%[") or
+       text:match("^%s*\\" .. cmd .. "%s*{") or
+       text:match("^%s*\\" .. cmd .. "%s*$") then
+      return true
+    end
+  end
+  return false
+end
+
 -- Forward declaration: set after RawInline/RawBlock are defined.
--- Used by parse_latex_blocks/parse_latex_inlines to walk parsed content.
 local inner_filter = nil
 
 --- Pre-process LaTeX text to replace custom commands with standard LaTeX
@@ -131,35 +140,26 @@ local inner_filter = nil
 --- consumed by pandoc.read rather than preserved as RawInline, so we must
 --- translate them before parsing.
 local function preprocess_latex(text)
-  -- \inlinecode{...} → \texttt{...}
   text = text:gsub("\\inlinecode%s*(%b{})", function(arg)
     return "\\texttt{" .. arg:sub(2, -2) .. "}"
   end)
-  -- \param{...} → \textit{...}
   text = text:gsub("\\param%s*(%b{})", function(arg)
     return "\\textit{" .. arg:sub(2, -2) .. "}"
   end)
-  -- \badge{...} → \textbf{[...]}
   text = text:gsub("\\badge%s*(%b{})", function(arg)
     return "\\textbf{[" .. arg:sub(2, -2) .. "]}"
   end)
-  -- \menu{A, B, C} → \textbf{A} $\rightarrow$ \textbf{B} $\rightarrow$ \textbf{C}
   text = text:gsub("\\menu%s*(%b{})", function(arg)
-    local content = arg:sub(2, -2)
     local parts = {}
-    for item in content:gmatch("([^,]+)") do
+    for item in arg:sub(2, -2):gmatch("([^,]+)") do
       item = trim(item)
-      if item ~= "" then
-        table.insert(parts, "\\textbf{" .. item .. "}")
-      end
+      if item ~= "" then table.insert(parts, "\\textbf{" .. item .. "}") end
     end
     return table.concat(parts, " \\textbf{→} ")
   end)
-  -- \weblink{url}{text} → \href{url}{text}
   text = text:gsub("\\weblink%s*(%b{})%s*(%b{})", function(url_arg, text_arg)
     return "\\href{" .. url_arg:sub(2, -2) .. "}{" .. text_arg:sub(2, -2) .. "}"
   end)
-  -- \note{...} → \textit{Note: ...}
   text = text:gsub("\\note%s*(%b{})", function(arg)
     return "\\textit{Note: " .. arg:sub(2, -2) .. "}"
   end)
@@ -181,28 +181,19 @@ local function parse_latex_blocks(content)
     end
     return result.blocks
   end
-  -- Fallback: treat as plain text paragraphs
   return {pandoc.Para(pandoc.Str(content))}
 end
 
 --- Parse inner LaTeX content into pandoc Inlines.
---- Walks the result with inner_filter to process any raw LaTeX inside.
 local function parse_latex_inlines(content)
   content = preprocess_latex(content)
   local ok, result = pcall(pandoc.read, content, "latex")
   if ok and result then
-    -- Flatten blocks into inlines (join with space)
     local inlines = pandoc.Inlines({})
     for _, block in ipairs(result.blocks) do
-      local blk = block
-      if inner_filter then
-        blk = pandoc.walk_block(block, inner_filter)
-      end
-      if blk.t == "Para" then
-        inlines:extend(blk.content)
-      elseif blk.t == "Plain" then
-        inlines:extend(blk.content)
-      end
+      local blk = inner_filter and pandoc.walk_block(block, inner_filter) or block
+      if blk.t == "Para" then inlines:extend(blk.content)
+      elseif blk.t == "Plain" then inlines:extend(blk.content) end
     end
     return inlines
   end
@@ -210,42 +201,27 @@ local function parse_latex_inlines(content)
 end
 
 --- Create a format-appropriate callout box.
---- @param cls string: "warning", "tip", or "infobox"
---- @param label string: display label (e.g. "Important")
---- @param content pandoc.Blocks: parsed inner content
 local function make_callout(cls, label, content)
-  -- Prepend the bold label as a paragraph
-  local label_para = pandoc.Para({
-    pandoc.Strong({pandoc.Str(label)}),
-    pandoc.Str(" "),
-  })
+  local label_para = pandoc.Para({pandoc.Strong({pandoc.Str(label)}), pandoc.Str(" ")})
 
   if FORMAT:match("docx") then
-    -- DOCX: Div with class attribute
     local div_content = pandoc.Blocks({label_para})
     div_content:extend(content)
     return pandoc.Div(div_content, pandoc.Attr("", {cls}, {}))
 
   elseif FORMAT:match("markdown") then
-    -- Markdown: BlockQuote with **Label:** prefix
     -- Avoid double colon if label already ends with ":"
     local label_text = label
-    if not label_text:match(":$") then
-      label_text = label_text .. ":"
-    end
+    if not label_text:match(":$") then label_text = label_text .. ":" end
     local label_inline = pandoc.Inlines({
-      pandoc.Strong({pandoc.Str(label_text)}),
-      pandoc.Space(),
+      pandoc.Strong({pandoc.Str(label_text)}), pandoc.Space(),
     })
     local quote_blocks = pandoc.Blocks({})
-    -- Add label to first paragraph if possible
     if #content > 0 and content[1].t == "Para" then
       local first_para = pandoc.Para(label_inline:clone())
       first_para.content:extend(content[1].content)
       quote_blocks:insert(first_para)
-      for i = 2, #content do
-        quote_blocks:insert(content[i])
-      end
+      for i = 2, #content do quote_blocks:insert(content[i]) end
     else
       quote_blocks:insert(pandoc.Para(label_inline))
       quote_blocks:extend(content)
@@ -260,47 +236,96 @@ local function make_callout(cls, label, content)
   end
 end
 
+--- Parse \image, \imagecap, or \imageplaceholder commands from text.
+--- Returns (caption_inlines, path, is_placeholder, desc_raw) or nil.
+--- is_placeholder is true only for \imageplaceholder; the RawInline handler
+--- uses desc_raw for the placeholder text instead of creating an Image.
+local function parse_image(text)
+  -- Try \image[opts]{file}
+  local file = text:match("\\image%s*%b[]%s*(%b{})") or text:match("\\image%s*(%b{})")
+  if file then
+    local path = file:sub(2, -2)
+    local basename = path:match("([^/]+)$") or path
+    return pandoc.Inlines({pandoc.Str(basename)}), path, false, nil
+  end
+
+  -- Try \imagecap[opts]{file}{caption}
+  local start = text:find("\\imagecap%s*")
+  if start then
+    local pos = start + #("\\imagecap")
+    local after_opts = pos
+    local opt_bracket = text:find("%[", pos)
+    if opt_bracket and opt_bracket < (text:find("{", pos) or math.huge) then
+      local depth, i = 0, opt_bracket
+      while i <= #text do
+        local c = text:sub(i, i)
+        if c == "[" then depth = depth + 1
+        elseif c == "]" then depth = depth - 1; if depth == 0 then after_opts = i + 1; break end end
+        i = i + 1
+      end
+    end
+    local brace1 = text:find("{", after_opts)
+    if brace1 then
+      local file_path, end1 = parse_brace_arg(text, brace1 + 1)
+      if file_path then
+        local brace2 = text:find("{", end1 + 1)
+        if brace2 then
+          local caption_text = parse_brace_arg(text, brace2 + 1)
+          if caption_text then
+            return parse_latex_inlines(caption_text), file_path, false, nil
+          end
+        end
+      end
+    end
+  end
+
+  -- Try \imageplaceholder{path}{desc}
+  local ph_start = text:find("\\imageplaceholder%s*{")
+  if ph_start then
+    local brace1 = text:find("{", ph_start)
+    if brace1 then
+      local path, end1 = parse_brace_arg(text, brace1 + 1)
+      if path then
+        local brace2 = text:find("{", end1 + 1)
+        if brace2 then
+          local desc = parse_brace_arg(text, brace2 + 1)
+          if desc then
+            return parse_latex_inlines(desc), path, true, desc
+          end
+        end
+      end
+    end
+  end
+
+  return nil
+end
+
+--- Parse \codefile[lang]{file} or \codefile{file}. Returns (content, lang_hint) or nil.
+local function parse_codefile(text)
+  local lang_hint, file_arg = text:match("\\codefile%s*%[([^%]]*)%]%s*(%b{})")
+  if not lang_hint then file_arg = text:match("\\codefile%s*(%b{})") end
+  if not file_arg then return nil end
+  local file_path = file_arg:sub(2, -2)
+  local content = read_file(file_path)
+  if content then return content, lang_hint end
+  return nil, nil, file_path -- third return = path for error message
+end
+
 -- =====================================================================
 --  Document-level: Pandoc handler
---  Read the source .tex file to extract metadata and language option.
 -- =====================================================================
 
--- Commands to strip from the document body (preamble setters + structural)
-local strip_commands = {
-  ["setguidetitle"]  = true,
-  ["setheadertitle"] = true,
-  ["setcovertext"]   = true,
-  ["setheaderlogo"]  = true,
-  ["setcoverlogo"]   = true,
-  ["setdocversion"]  = true,
-  ["setdocdate"]     = true,
-  ["makecover"]      = true,
-  ["maketoc"]        = true,
-  ["startbody"]      = true,
-}
-
 function Pandoc(doc)
-  -- -----------------------------------------------------------------
-  --  Detect language from source file
-  -- -----------------------------------------------------------------
+  -- Detect language from source file
   local source_path = nil
   if PANDOC_STATE and PANDOC_STATE.input_files then
-    -- pandoc >= 2.12: PANDOC_STATE.input_files is a list
-    for _, f in ipairs(PANDOC_STATE.input_files) do
-      source_path = f
-      break
-    end
+    for _, f in ipairs(PANDOC_STATE.input_files) do source_path = f; break end
   end
 
   if source_path then
     local src = read_file(source_path)
     if src then
-      -- Detect \documentclass[portuguese]{guide}
-      if src:find("\\documentclass%s*%[.*portuguese.*%]%s*{guide}") then
-        lang = "pt"
-      end
-
-      -- Extract metadata: \setguidetitle{...}
+      if src:find("\\documentclass%s*%[.*portuguese.*%]%s*{guide}") then lang = "pt" end
       local title = find_cmd_arg(src, "setguidetitle")
       if title then
         local current_title = doc.meta.title
@@ -308,50 +333,23 @@ function Pandoc(doc)
           doc.meta.title = pandoc.Inlines({pandoc.Str(title)})
         end
       end
-
-      -- Extract metadata: \setdocversion{...}
       local version = find_cmd_arg(src, "setdocversion")
-      if version then
-        doc.meta["doc-version"] = version
-      end
-
-      -- Extract metadata: \setdocdate{...}
+      if version then doc.meta["doc-version"] = version end
       local date = find_cmd_arg(src, "setdocdate")
-      if date then
-        -- Replace \today with the current date
-        date = date:gsub("\\today", os.date("%Y-%m-%d"))
-        doc.meta.date = date
-      end
+      if date then doc.meta.date = date:gsub("\\today", os.date("%Y-%m-%d")) end
     end
   end
 
-  -- -----------------------------------------------------------------
-  --  Strip structural/preamble commands from the body
-  -- -----------------------------------------------------------------
+  -- Strip structural/preamble commands from the body
   local function strip_from_inlines(inlines)
     local new_inlines = pandoc.Inlines({})
-    local i = 1
-    while i <= #inlines do
+    for i = 1, #inlines do
       local inl = inlines[i]
-      if inl.t == "RawInline" and inl.format == "latex" then
-        local text = inl.text
-        -- Check each strip command
-        local skip = false
-        for cmd, _ in pairs(strip_commands) do
-          if text:match("^%s*\\" .. cmd .. "%s*%[") or
-             text:match("^%s*\\" .. cmd .. "%s*{") or
-             text:match("^%s*\\" .. cmd .. "%s*$") then
-            skip = true
-            break
-          end
-        end
-        if not skip then
-          new_inlines:insert(inl)
-        end
+      if inl.t == "RawInline" and inl.format == "latex" and is_strip_cmd(inl.text) then
+        -- skip
       else
         new_inlines:insert(inl)
       end
-      i = i + 1
     end
     return new_inlines
   end
@@ -359,41 +357,22 @@ function Pandoc(doc)
   local function strip_from_blocks(blocks)
     local new_blocks = pandoc.Blocks({})
     for _, blk in ipairs(blocks) do
-      if blk.t == "RawBlock" and blk.format == "latex" then
-        local text = blk.text
-        local skip = false
-        for cmd, _ in pairs(strip_commands) do
-          if text:match("^%s*\\" .. cmd .. "%s*%[") or
-             text:match("^%s*\\" .. cmd .. "%s*{") or
-             text:match("^%s*\\" .. cmd .. "%s*$") then
-            skip = true
-            break
-          end
-        end
-        if not skip then
-          new_blocks:insert(blk)
-        end
+      if blk.t == "RawBlock" and blk.format == "latex" and is_strip_cmd(blk.text) then
+        -- skip
       else
-        -- Recurse into block content
-        if blk.t == "Para" then
+        if blk.t == "Para" or blk.t == "Plain" then
           blk.content = strip_from_inlines(blk.content)
-        elseif blk.t == "Plain" then
-          blk.content = strip_from_inlines(blk.content)
-        elseif blk.t == "Div" then
-          blk.content = strip_from_blocks(blk.content)
-        elseif blk.t == "BlockQuote" then
+        elseif blk.t == "Div" or blk.t == "BlockQuote" then
           blk.content = strip_from_blocks(blk.content)
         elseif blk.t == "BulletList" then
-          -- pandoc 3.x: items are single Block elements
-          for i, item in ipairs(blk.content) do
+          for _, item in ipairs(blk.content) do
             if item.t == "Para" or item.t == "Plain" then
               item.content = strip_from_inlines(item.content)
             end
           end
         elseif blk.t == "OrderedList" then
           -- blk.content[1] is the list items, blk.content[2] is the list attrs
-          -- pandoc 3.x: items are single Block elements
-          for i, item in ipairs(blk.content[1]) do
+          for _, item in ipairs(blk.content[1]) do
             if item.t == "Para" or item.t == "Plain" then
               item.content = strip_from_inlines(item.content)
             end
@@ -407,625 +386,294 @@ function Pandoc(doc)
 
   doc.blocks = strip_from_blocks(doc.blocks)
 
-  -- -----------------------------------------------------------------
-  --  Promote \codefile Code inlines to CodeBlocks
-  --  When \codefile appears inline in a Para, the RawInline handler
-  --  returns pandoc.Code with a "codefile" class. Multi-line code
-  --  content should be a fenced code block, not inline code.
-  --  Walk blocks: find Para containing Code with "codefile" class,
-  --  split the Para, and insert a CodeBlock.
-  -- -----------------------------------------------------------------
+  -- Promote \codefile Code inlines to CodeBlocks.
+  -- When \codefile appears inline in a Para (no blank line before it),
+  -- pandoc treats it as RawInline. The RawInline handler returns
+  -- pandoc.Code with a "codefile" marker class. Multi-line code
+  -- content should be a fenced code block, not inline code.
   local function promote_codefile_inlines(blocks)
     local new_blocks = pandoc.Blocks({})
     for _, blk in ipairs(blocks) do
-      if blk.t == "Para" then
-        -- Collect all Code inlines with "codefile" class
+      if blk.t ~= "Para" then
+        new_blocks:insert(blk)
+      else
         local codefile_positions = {}
-
         for i, inl in ipairs(blk.content) do
           if inl.t == "Code" then
-            local has_codefile = false
-            for _, cls in ipairs(inl.classes) do
-              if cls == "codefile" then has_codefile = true end
-            end
-            if has_codefile then
-              -- Build classes list without the "codefile" marker
-              local codefile_classes = {}
-              for _, cls in ipairs(inl.classes) do
-                if cls ~= "codefile" then
-                  table.insert(codefile_classes, cls)
-                end
-              end
-              table.insert(codefile_positions, {
-                idx = i,
-                text = inl.text,
-                classes = codefile_classes,
-              })
+            local has_cf = false
+            for _, cls in ipairs(inl.classes) do if cls == "codefile" then has_cf = true; break end end
+            if has_cf then
+              local cf_classes = {}
+              for _, cls in ipairs(inl.classes) do if cls ~= "codefile" then table.insert(cf_classes, cls) end end
+              table.insert(codefile_positions, { idx = i, text = inl.text, classes = cf_classes })
             end
           end
         end
-
-        if #codefile_positions > 0 then
-          -- Split the Para into multiple blocks at each codefile position
+        if #codefile_positions == 0 then
+          new_blocks:insert(blk)
+        else
           local prev_end = 0
           for _, cf in ipairs(codefile_positions) do
-            -- Text before this Code → separate Para
             if cf.idx > prev_end + 1 then
               local before = pandoc.Inlines({})
-              for i = prev_end + 1, cf.idx - 1 do
-                before:insert(blk.content[i])
-              end
+              for i = prev_end + 1, cf.idx - 1 do before:insert(blk.content[i]) end
               new_blocks:insert(pandoc.Para(before))
             end
-
-            -- Code → CodeBlock
-            new_blocks:insert(pandoc.CodeBlock(cf.text,
-              pandoc.Attr("", cf.classes, {})))
-
+            new_blocks:insert(pandoc.CodeBlock(cf.text, pandoc.Attr("", cf.classes, {})))
             prev_end = cf.idx
           end
-
-          -- Text after the last Code → separate Para
           local last_idx = codefile_positions[#codefile_positions].idx
           if last_idx < #blk.content then
             local after = pandoc.Inlines({})
-            for i = last_idx + 1, #blk.content do
-              after:insert(blk.content[i])
-            end
+            for i = last_idx + 1, #blk.content do after:insert(blk.content[i]) end
             new_blocks:insert(pandoc.Para(after))
           end
-        else
-          new_blocks:insert(blk)
         end
-      else
-        new_blocks:insert(blk)
       end
     end
     return new_blocks
   end
 
   doc.blocks = promote_codefile_inlines(doc.blocks)
-
   return doc
 end
 
 -- =====================================================================
---  RawBlock handler — environments
+--  RawBlock environment handlers
+--  Each receives the full raw text, does its own \begin{env} matching,
+--  and returns a pandoc element or nil.
+-- =====================================================================
+
+local function handle_code_env(text)
+  local lang_hint, body = text:match("\\begin%s*{code}%s*%[([^%]]*)%]%s*(.-)%s*\\end%s*{code}")
+  if not lang_hint then body = text:match("\\begin%s*{code}%s*(.-)%s*\\end%s*{code}") end
+  if not body then return nil end
+  -- Trim trailing whitespace from each line (fancyvrb artifact)
+  local cleaned = body:gsub("\n%s+\n", "\n\n"):gsub("%s+$", "")
+  local classes = (lang_hint and lang_hint ~= "") and {lang_hint} or {}
+  return pandoc.CodeBlock(cleaned, pandoc.Attr("", classes, {}))
+end
+
+--- Factory: returns a handler for a callout environment (warning/tip/infobox).
+local function handle_callout_env(cls, label_key)
+  return function(text)
+    local body = text:match("\\begin%s*{" .. cls .. "}%s*(.-)%s*\\end%s*{" .. cls .. "}")
+    if not body then return nil end
+    return make_callout(cls, L(label_key), parse_latex_blocks(body))
+  end
+end
+
+local function handle_objectives_env(text)
+  local body = text:match("\\begin%s*{objectives}%s*(.-)%s*\\end%s*{objectives}")
+  if not body then return nil end
+  local blocks = pandoc.Blocks({})
+
+  local function add_labeled_para(label_text, content_text)
+    local inlines = pandoc.Inlines({pandoc.Strong({pandoc.Str(label_text)}), pandoc.Space()})
+    if content_text and content_text ~= "" then inlines:extend(parse_latex_inlines(content_text)) end
+    blocks:insert(pandoc.Para(inlines))
+  end
+
+  local genobj = find_cmd_arg(body, "generalobjective")
+  if genobj then add_labeled_para(L("genobj"), genobj) end
+  for _, arg in ipairs(find_all_cmd_args(body, "objective")) do
+    add_labeled_para(L("obj"), arg)
+  end
+
+  if body:find("\\prerequisites") then
+    add_labeled_para(L("prereq"), nil)
+    local after = body:match("\\prerequisites%s*(.*)")
+    if after then for _, blk in ipairs(parse_latex_blocks(after)) do blocks:insert(blk) end end
+  end
+  if body:find("\\stepbystep") then
+    add_labeled_para(L("stepbystep"), nil)
+    local after = body:match("\\stepbystep%s*(.*)")
+    if after then for _, blk in ipairs(parse_latex_blocks(after)) do blocks:insert(blk) end end
+  end
+
+  if #blocks == 0 then blocks = parse_latex_blocks(body) end
+  if FORMAT:match("docx") or FORMAT:match("html5") then
+    return pandoc.Div(blocks, pandoc.Attr("", {"objectives"}, {}))
+  else
+    return pandoc.BlockQuote(blocks)
+  end
+end
+
+local function handle_hutable_env(text)
+  local body = text:match("\\begin%s*{hutable}%s*%b{}%s*(.-)%s*\\end%s*{hutable}")
+  local spec_arg = text:match("\\begin%s*{hutable}%s*({[^}]*})")
+  if not body or not spec_arg then return nil end
+
+  local col_spec_str = spec_arg:sub(2, -2)
+  local num_cols = 0
+  for _ in col_spec_str:gmatch("[lcrp]") do num_cols = num_cols + 1 end
+  if num_cols == 0 then num_cols = 1 end
+
+  -- Clean: strip \rowcolor{...}, \tbody, \thd{...} → content
+  local cleaned = body
+  cleaned = cleaned:gsub("\\rowcolor%s*%b{}", "")
+  cleaned = cleaned:gsub("\\tbody", "")
+  cleaned = cleaned:gsub("\\thd%s*(%b{})", function(m) return m:sub(2, -2) end)
+
+  -- Split into rows on \\
+  local rows = {}
+  for row_str in cleaned:gmatch("(.-)\\\\") do
+    row_str = trim(row_str)
+    if row_str ~= "" then table.insert(rows, split_row(row_str, num_cols)) end
+  end
+  -- Handle last row without trailing \\
+  local after_last_sep = cleaned:match("\\\\%s*(.*)$")
+  if after_last_sep then
+    after_last_sep = trim(after_last_sep)
+    if after_last_sep ~= "" then table.insert(rows, split_row(after_last_sep, num_cols)) end
+  elseif #rows == 0 and cleaned ~= "" then
+    local row_str = trim(cleaned)
+    if row_str ~= "" then table.insert(rows, split_row(row_str, num_cols)) end
+  end
+
+  if #rows == 0 then return pandoc.Para({pandoc.Str("[Empty table]")}) end
+  local header_row = table.remove(rows, 1)
+
+  -- Render a LaTeX cell to markdown-safe plain text
+  local function cell_to_md(cell_text)
+    cell_text = preprocess_latex(cell_text)
+    local inlines = parse_latex_inlines(cell_text)
+    local doc = pandoc.Pandoc({pandoc.Para(inlines)})
+    return pandoc.write(doc, "markdown"):gsub("\n", " "):gsub("%s+$", "")
+  end
+
+  -- Build a markdown table string and parse it.
+  -- This is version-safe across pandoc 2.x and 3.x.
+  local md_lines = {}
+  local hdr_cells = {}
+  for _, ct in ipairs(header_row) do hdr_cells[#hdr_cells + 1] = cell_to_md(ct) end
+  md_lines[#md_lines + 1] = "| " .. table.concat(hdr_cells, " | ") .. " |"
+  local sep_cells = {}
+  for _ = 1, num_cols do sep_cells[#sep_cells + 1] = "---" end
+  md_lines[#md_lines + 1] = "| " .. table.concat(sep_cells, " | ") .. " |"
+  for _, row in ipairs(rows) do
+    local body_cells = {}
+    for _, ct in ipairs(row) do body_cells[#body_cells + 1] = cell_to_md(ct) end
+    md_lines[#md_lines + 1] = "| " .. table.concat(body_cells, " | ") .. " |"
+  end
+
+  local md_table = table.concat(md_lines, "\n") .. "\n"
+  local parsed = pandoc.read(md_table, "markdown")
+  if #parsed.blocks > 0 and parsed.blocks[1].t == "Table" then
+    -- For markdown output, use RawBlock to preserve pipe table syntax.
+    -- The markdown writer converts Table AST to simple tables (whitespace-
+    -- aligned), which lose the pipe delimiters. RawBlock passes the pipe
+    -- table through verbatim.
+    if FORMAT:match("markdown") then return pandoc.RawBlock("markdown", md_table) end
+    return parsed.blocks[1]
+  end
+  return pandoc.CodeBlock(md_table)
+end
+
+local function handle_changelog_env(text)
+  local body = text:match("\\begin%s*{changelog}%s*(.-)%s*\\end%s*{changelog}")
+  if not body then return nil end
+  local blocks = pandoc.Blocks({})
+  blocks:insert(pandoc.Header(1, pandoc.Inlines({pandoc.Str(L("changelog"))})))
+
+  local pos = 1
+  while true do
+    local entry_start = body:find("\\changelogentry%s*{", pos)
+    if not entry_start then break end
+    local brace1 = body:find("{", entry_start)
+    if not brace1 then break end
+    local version, end1 = parse_brace_arg(body, brace1 + 1)
+    if not version then break end
+    local brace2 = body:find("{", end1 + 1)
+    if not brace2 then break end
+    local date_str, end2 = parse_brace_arg(body, brace2 + 1)
+    if not date_str then break end
+    local brace3 = body:find("{", end2 + 1)
+    if not brace3 then break end
+    local items_content, end3 = parse_brace_arg(body, brace3 + 1)
+    if not items_content then break end
+    blocks:insert(pandoc.Para({
+      pandoc.Strong({pandoc.Str(version)}), pandoc.Str("  "), pandoc.Emph({pandoc.Str(date_str)}),
+    }))
+    for _, blk in ipairs(parse_latex_blocks(items_content)) do blocks:insert(blk) end
+    pos = (end3 or brace3) + 1
+  end
+  return blocks
+end
+
+-- Dispatch table: environment name → handler function.
+local block_env_handlers = {
+  code       = handle_code_env,
+  warning    = handle_callout_env("warning", "warning"),
+  tip        = handle_callout_env("tip", "tip"),
+  infobox    = handle_callout_env("infobox", "infobox"),
+  objectives = handle_objectives_env,
+  hutable    = handle_hutable_env,
+  changelog  = handle_changelog_env,
+}
+
+-- =====================================================================
+--  RawBlock handler
 -- =====================================================================
 
 function RawBlock(raw)
   if raw.format ~= "latex" then return nil end
   local text = raw.text
 
-  -- -------------------------------------------------------------------
-  --  \begin{code}[lang]...\end{code}  →  CodeBlock
-  -- -------------------------------------------------------------------
-  do
-    local lang_hint, body
-    -- With optional language: \begin{code}[bash]...\end{code}
-    lang_hint, body = text:match("\\begin%s*{code}%s*%[([^%]]*)%]%s*(.-)%s*\\end%s*{code}")
-    if not lang_hint then
-      -- Without language: \begin{code}...\end{code}
-      body = text:match("\\begin%s*{code}%s*(.-)%s*\\end%s*{code}")
-    end
-    if body then
-      -- Trim trailing whitespace from each line (fancyvrb artifact)
-      local cleaned = body:gsub("\n%s+\n", "\n\n"):gsub("%s+$", "")
-      local classes = {}
-      if lang_hint and lang_hint ~= "" then
-        classes = {lang_hint}
-      end
-      return pandoc.CodeBlock(cleaned, pandoc.Attr("", classes, {}))
+  -- Try environment handlers via dispatch table
+  for env, handler in pairs(block_env_handlers) do
+    if text:find("\\begin%s*{" .. env .. "}") then
+      local result = handler(text)
+      if result then return result end
     end
   end
 
-  -- -------------------------------------------------------------------
-  --  \begin{warning}...\end{warning}  →  callout box
-  -- -------------------------------------------------------------------
-  do
-    local body = text:match("\\begin%s*{warning}%s*(.-)%s*\\end%s*{warning}")
-    if body then
-      local content = parse_latex_blocks(body)
-      return make_callout("warning", L("warning"), content)
-    end
-  end
+  -- Command handlers (sequential — different pattern structures)
 
-  -- -------------------------------------------------------------------
-  --  \begin{tip}...\end{tip}  →  callout box
-  -- -------------------------------------------------------------------
-  do
-    local body = text:match("\\begin%s*{tip}%s*(.-)%s*\\end%s*{tip}")
-    if body then
-      local content = parse_latex_blocks(body)
-      return make_callout("tip", L("tip"), content)
-    end
-  end
-
-  -- -------------------------------------------------------------------
-  --  \begin{infobox}...\end{infobox}  →  callout box
-  -- -------------------------------------------------------------------
-  do
-    local body = text:match("\\begin%s*{infobox}%s*(.-)%s*\\end%s*{infobox}")
-    if body then
-      local content = parse_latex_blocks(body)
-      return make_callout("infobox", L("infobox"), content)
-    end
-  end
-
-  -- -------------------------------------------------------------------
-  --  \begin{objectives}...\end{objectives}
-  --  Parse inner commands: \generalobjective, \objective,
-  --  \prerequisites, \stepbystep
-  -- -------------------------------------------------------------------
-  do
-    local body = text:match("\\begin%s*{objectives}%s*(.-)%s*\\end%s*{objectives}")
-    if body then
-      local blocks = pandoc.Blocks({})
-
-      -- Helper: add a labeled paragraph (bold label + content)
-      local function add_labeled_para(label_text, content_text)
-        local inlines = pandoc.Inlines({
-          pandoc.Strong({pandoc.Str(label_text)}),
-          pandoc.Space(),
-        })
-        if content_text and content_text ~= "" then
-          local parsed = parse_latex_inlines(content_text)
-          inlines:extend(parsed)
-        end
-        blocks:insert(pandoc.Para(inlines))
-      end
-
-      -- Parse \generalobjective{...}
-      local genobj = find_cmd_arg(body, "generalobjective")
-      if genobj then
-        add_labeled_para(L("genobj"), genobj)
-      end
-
-      -- Parse \objective{...}
-      local obj_args = find_all_cmd_args(body, "objective")
-      for _, arg in ipairs(obj_args) do
-        add_labeled_para(L("obj"), arg)
-      end
-
-      -- Parse \prerequisites (no argument — just a label)
-      if body:find("\\prerequisites") then
-        add_labeled_para(L("prereq"), nil)
-        -- Parse any following itemize/enumerate as normal content
-        local after_prereq = body:match("\\prerequisites%s*(.*)")
-        if after_prereq then
-          local parsed = parse_latex_blocks(after_prereq)
-          for _, blk in ipairs(parsed) do
-            blocks:insert(blk)
-          end
-        end
-      end
-
-      -- Parse \stepbystep (no argument — just a label)
-      if body:find("\\stepbystep") then
-        add_labeled_para(L("stepbystep"), nil)
-        local after_step = body:match("\\stepbystep%s*(.*)")
-        if after_step then
-          local parsed = parse_latex_blocks(after_step)
-          for _, blk in ipairs(parsed) do
-            blocks:insert(blk)
-          end
-        end
-      end
-
-      -- If nothing was parsed, fall back to full content parse
-      if #blocks == 0 then
-        blocks = parse_latex_blocks(body)
-      end
-
-      if FORMAT:match("docx") or FORMAT:match("html5") then
-        return pandoc.Div(blocks, pandoc.Attr("", {"objectives"}, {}))
-      else
-        -- Markdown: BlockQuote
-        return pandoc.BlockQuote(blocks)
-      end
-    end
-  end
-
-  -- -------------------------------------------------------------------
-  --  \begin{hutable}{|spec|}...\end{hutable}  →  pandoc Table
-  -- -------------------------------------------------------------------
-  do
-    local body = text:match("\\begin%s*{hutable}%s*%b{}%s*(.-)%s*\\end%s*{hutable}")
-    -- Also extract the column spec from the argument
-    local spec_arg = text:match("\\begin%s*{hutable}%s*({[^}]*})")
-
-    if body and spec_arg then
-      -- Count columns from spec: |l|l|l| → 3 columns
-      local col_spec_str = spec_arg:sub(2, -2) -- strip outer braces
-      local num_cols = 0
-      for _ in col_spec_str:gmatch("[lcrp]") do
-        num_cols = num_cols + 1
-      end
-      if num_cols == 0 then num_cols = 1 end
-
-      -- Clean the body: strip \rowcolor{...}, \thd{...} → just content,
-      -- strip \tbody
-      local cleaned = body
-      cleaned = cleaned:gsub("\\rowcolor%s*%b{}", "")     -- \rowcolor{huaweired}
-      cleaned = cleaned:gsub("\\tbody", "")                -- \tbody marker
-      cleaned = cleaned:gsub("\\thd%s*(%b{})", function(m)
-        -- \thd{content} → just content (strip outer braces)
-        return m:sub(2, -2)
-      end)
-
-      -- Split into rows on \\
-      local rows = {}
-      for row_str in cleaned:gmatch("(.-)\\\\") do
-        row_str = trim(row_str)
-        if row_str ~= "" then
-          -- Split on & (column separator)
-          local cells = {}
-          local cell_start = 1
-          local depth = 0
-          for i = 1, #row_str do
-            local c = row_str:sub(i, i)
-            if c == "{" then depth = depth + 1
-            elseif c == "}" then depth = depth - 1
-            elseif c == "&" and depth == 0 then
-              local cell = trim(row_str:sub(cell_start, i - 1))
-              table.insert(cells, cell)
-              cell_start = i + 1
-            end
-          end
-          -- Last cell
-          local cell = trim(row_str:sub(cell_start))
-          table.insert(cells, cell)
-
-          -- Pad or trim to num_cols
-          while #cells < num_cols do
-            table.insert(cells, "")
-          end
-          while #cells > num_cols do
-            table.remove(cells)
-          end
-
-          table.insert(rows, cells)
-        end
-      end
-
-      -- Handle last row without trailing \\
-      -- Check if there's remaining content after the last \\
-      local after_last_sep = cleaned:match("\\\\%s*(.*)$")
-      if after_last_sep then
-        after_last_sep = trim(after_last_sep)
-        if after_last_sep ~= "" then
-          -- Split on & (column separator)
-          local cells = {}
-          local cell_start = 1
-          local depth = 0
-          for i = 1, #after_last_sep do
-            local c = after_last_sep:sub(i, i)
-            if c == "{" then depth = depth + 1
-            elseif c == "}" then depth = depth - 1
-            elseif c == "&" and depth == 0 then
-              local cell = trim(after_last_sep:sub(cell_start, i - 1))
-              table.insert(cells, cell)
-              cell_start = i + 1
-            end
-          end
-          -- Last cell
-          local cell = trim(after_last_sep:sub(cell_start))
-          table.insert(cells, cell)
-
-          -- Pad or trim to num_cols
-          while #cells < num_cols do
-            table.insert(cells, "")
-          end
-          while #cells > num_cols do
-            table.remove(cells)
-          end
-
-          table.insert(rows, cells)
-        end
-      elseif #rows == 0 and cleaned ~= "" then
-        -- No \\ at all — treat entire content as a single row
-        local row_str = trim(cleaned)
-        if row_str ~= "" then
-          local cells = {}
-          local cell_start = 1
-          local depth = 0
-          for i = 1, #row_str do
-            local c = row_str:sub(i, i)
-            if c == "{" then depth = depth + 1
-            elseif c == "}" then depth = depth - 1
-            elseif c == "&" and depth == 0 then
-              local cell = trim(row_str:sub(cell_start, i - 1))
-              table.insert(cells, cell)
-              cell_start = i + 1
-            end
-          end
-          local cell = trim(row_str:sub(cell_start))
-          table.insert(cells, cell)
-
-          while #cells < num_cols do
-            table.insert(cells, "")
-          end
-          while #cells > num_cols do
-            table.remove(cells)
-          end
-
-          table.insert(rows, cells)
-        end
-      end
-
-      if #rows > 0 then
-        -- First row = header, rest = body
-        local header_row = table.remove(rows, 1)
-
-        -- Helper: render a LaTeX cell text to markdown-safe plain text.
-        -- Parses the cell as LaTeX, then writes it as markdown.
-        local function cell_to_md(cell_text)
-          cell_text = preprocess_latex(cell_text)
-          local inlines = parse_latex_inlines(cell_text)
-          local doc = pandoc.Pandoc({pandoc.Para(inlines)})
-          local md = pandoc.write(doc, "markdown"):gsub("\n", " "):gsub("%s+$", "")
-          return md
-        end
-
-        -- Build a markdown table string and parse it.
-        -- This is version-safe across pandoc 2.x and 3.x.
-        local md_lines = {}
-
-        -- Header row
-        local hdr_cells = {}
-        for _, cell_text in ipairs(header_row) do
-          table.insert(hdr_cells, cell_to_md(cell_text))
-        end
-        table.insert(md_lines, "| " .. table.concat(hdr_cells, " | ") .. " |")
-
-        -- Separator row
-        local sep_cells = {}
-        for _ = 1, num_cols do
-          table.insert(sep_cells, "---")
-        end
-        table.insert(md_lines, "| " .. table.concat(sep_cells, " | ") .. " |")
-
-        -- Body rows
-        for _, row in ipairs(rows) do
-          local body_cells = {}
-          for _, cell_text in ipairs(row) do
-            table.insert(body_cells, cell_to_md(cell_text))
-          end
-          table.insert(md_lines, "| " .. table.concat(body_cells, " | ") .. " |")
-        end
-
-        local md_table = table.concat(md_lines, "\n") .. "\n"
-        local parsed = pandoc.read(md_table, "markdown")
-        if #parsed.blocks > 0 and parsed.blocks[1].t == "Table" then
-          -- For markdown output, use RawBlock to preserve pipe table syntax.
-          -- The markdown writer converts Table AST to simple tables (whitespace-
-          -- aligned), which lose the pipe delimiters. RawBlock passes the pipe
-          -- table through verbatim.
-          if FORMAT:match("markdown") then
-            return pandoc.RawBlock("markdown", md_table)
-          end
-          return parsed.blocks[1]
-        end
-        -- Fallback: return as a code block
-        return pandoc.CodeBlock(md_table)
-      else
-        -- Empty table: return a warning paragraph
-        return pandoc.Para({pandoc.Str("[Empty table]")})
-      end
-    end
-  end
-
-  -- -------------------------------------------------------------------
-  --  \begin{changelog}...\end{changelog}
-  --  Parse \changelogentry{ver}{date}{\item ...} entries
-  -- -------------------------------------------------------------------
-  do
-    local body = text:match("\\begin%s*{changelog}%s*(.-)%s*\\end%s*{changelog}")
-    if body then
-      local blocks = pandoc.Blocks({})
-
-      -- Add section header for changelog
-      blocks:insert(pandoc.Header(1, pandoc.Inlines({pandoc.Str(L("changelog"))})))
-
-      -- Parse each \changelogentry{version}{date}{items}
-      -- Use pattern matching with balanced braces
-      local pos = 1
-      while true do
-        local entry_start = body:find("\\changelogentry%s*{", pos)
-        if not entry_start then break end
-
-        -- Find first arg: version
-        local brace1 = body:find("{", entry_start)
-        if not brace1 then break end
-        local version, end1 = parse_brace_arg(body, brace1 + 1)
-        if not version then break end
-
-        -- Find second arg: date
-        local brace2 = body:find("{", end1 + 1)
-        if not brace2 then break end
-        local date_str, end2 = parse_brace_arg(body, brace2 + 1)
-        if not date_str then break end
-
-        -- Find third arg: items (contains \item ...)
-        local brace3 = body:find("{", end2 + 1)
-        if not brace3 then break end
-        local items_content, end3 = parse_brace_arg(body, brace3 + 1)
-        if not items_content then break end
-
-        -- Emit: **version** (date) as a paragraph
-        local entry_header = pandoc.Para({
-          pandoc.Strong({pandoc.Str(version)}),
-          pandoc.Str("  "),
-          pandoc.Emph({pandoc.Str(date_str)}),
-        })
-        blocks:insert(entry_header)
-
-        -- Parse the items content (contains \item ...)
-        local items_parsed = parse_latex_blocks(items_content)
-        for _, blk in ipairs(items_parsed) do
-          blocks:insert(blk)
-        end
-
-        pos = (end3 or brace3) + 1
-      end
-
-      return blocks
-    end
-  end
-
-  -- -------------------------------------------------------------------
-  --  \objective{...}  →  blockquote with "Objective:" label
-  -- -------------------------------------------------------------------
+  -- \objective{...}  →  callout with "Objective:" label
   do
     local arg = text:match("\\objective%s*(%b{})")
-    if arg then
-      local content = arg:sub(2, -2)
-      local parsed = parse_latex_blocks(content)
-      return make_callout("infobox", L("obj"), parsed)
-    end
+    if arg then return make_callout("infobox", L("obj"), parse_latex_blocks(arg:sub(2, -2))) end
   end
 
-  -- -------------------------------------------------------------------
-  --  \stepbystep  →  bold paragraph (section marker)
-  -- -------------------------------------------------------------------
+  -- \stepbystep  →  bold paragraph (section marker)
+  if text:match("^%s*\\stepbystep%s*$") then
+    return pandoc.Para({pandoc.Strong({pandoc.Str(L("stepbystep"))})})
+  end
+
+  -- \image, \imagecap, \imageplaceholder  →  Image (block-level)
   do
-    if text:match("^%s*\\stepbystep%s*$") then
-      return pandoc.Para({
-        pandoc.Strong({pandoc.Str(L("stepbystep"))}),
-      })
-    end
+    local caption, path = parse_image(text)
+    if caption and path then return pandoc.Para({pandoc.Image(caption, path)}) end
   end
 
-  -- -------------------------------------------------------------------
-  --  \image[opts]{file}  →  Image (block-level)
-  -- -------------------------------------------------------------------
-  do
-    local file = text:match("\\image%s*%b[]%s*(%b{})")
-    if not file then
-      file = text:match("\\image%s*(%b{})")
-    end
-    if file then
-      local path = file:sub(2, -2)
-      local basename = path:match("([^/]+)$") or path
-      return pandoc.Para({pandoc.Image(pandoc.Inlines({pandoc.Str(basename)}), path)})
-    end
-  end
-
-  -- -------------------------------------------------------------------
-  --  \imagecap[opts]{file}{caption}  →  Image with caption (block-level)
-  -- -------------------------------------------------------------------
-  do
-    local start = text:find("\\imagecap%s*")
-    if start then
-      local pos = start + #("\\imagecap")
-      local opt_bracket = text:find("%[", pos)
-      local after_opts = pos
-      if opt_bracket and opt_bracket < (text:find("{", pos) or math.huge) then
-        local depth = 0
-        local i = opt_bracket
-        while i <= #text do
-          local c = text:sub(i, i)
-          if c == "[" then depth = depth + 1
-          elseif c == "]" then
-            depth = depth - 1
-            if depth == 0 then after_opts = i + 1; break end
-          end
-          i = i + 1
-        end
-      end
-
-      local brace1 = text:find("{", after_opts)
-      if brace1 then
-        local file_path, end1 = parse_brace_arg(text, brace1 + 1)
-        if file_path then
-          local brace2 = text:find("{", end1 + 1)
-          if brace2 then
-            local caption_text, _ = parse_brace_arg(text, brace2 + 1)
-            if caption_text then
-              local caption_inlines = parse_latex_inlines(caption_text)
-              return pandoc.Para({pandoc.Image(caption_inlines, file_path)})
-            end
-          end
-        end
-      end
-    end
-  end
-
-  -- -------------------------------------------------------------------
-  --  \note{...}  →  blockquote with "Note:" label (block-level)
-  -- -------------------------------------------------------------------
+  -- \note{...}  →  callout with "Note:" label (block-level)
   do
     local arg = text:match("\\note%s*(%b{})")
-    if arg then
-      local content = arg:sub(2, -2)
-      local parsed = parse_latex_blocks(content)
-      return make_callout("infobox", "Note", parsed)
-    end
+    if arg then return make_callout("infobox", "Note", parse_latex_blocks(arg:sub(2, -2))) end
   end
 
-  -- -------------------------------------------------------------------
-  --  \imageplaceholder{path}{desc}  →  Image (block-level)
-  -- -------------------------------------------------------------------
-  do
-    local start = text:find("\\imageplaceholder%s*{")
-    if start then
-      local brace1 = text:find("{", start)
-      if brace1 then
-        local path, end1 = parse_brace_arg(text, brace1 + 1)
-        if path then
-          local brace2 = text:find("{", end1 + 1)
-          if brace2 then
-            local desc, _ = parse_brace_arg(text, brace2 + 1)
-            if desc then
-              local caption_inlines = parse_latex_inlines(desc)
-              return pandoc.Para({pandoc.Image(caption_inlines, path)})
-            end
-          end
-        end
-      end
-    end
-  end
-
-  -- -------------------------------------------------------------------
-  --  \badge{...}  →  bold bracketed text (block-level)
-  -- -------------------------------------------------------------------
+  -- \badge{...}  →  bold bracketed text (block-level)
   do
     local arg = text:match("\\badge%s*(%b{})")
     if arg then
       local content = arg:sub(2, -2)
       if FORMAT:match("docx") or FORMAT:match("html5") then
-        return pandoc.Div(
-          pandoc.Blocks({pandoc.Para({pandoc.Str(content)})}),
-          pandoc.Attr("", {"badge"}, {})
-        )
+        return pandoc.Div(pandoc.Blocks({pandoc.Para({pandoc.Str(content)})}), pandoc.Attr("", {"badge"}, {}))
       else
         return pandoc.Para({pandoc.Strong({pandoc.Str("[" .. content .. "]")})})
       end
     end
   end
 
-  -- -------------------------------------------------------------------
-  --  \codefile[lang]{file}  →  CodeBlock (block-level)
-  -- -------------------------------------------------------------------
+  -- \codefile[lang]{file}  →  CodeBlock (block-level)
   do
-    local lang_hint, file_arg = text:match("\\codefile%s*%[([^%]]*)%]%s*(%b{})")
-    if not lang_hint then
-      file_arg = text:match("\\codefile%s*(%b{})")
-    end
-    if file_arg then
-      local file_path = file_arg:sub(2, -2)
-      local content = read_file(file_path)
-      if content then
-        local classes = {}
-        if lang_hint and lang_hint ~= "" then
-          classes = {lang_hint}
-        end
-        return pandoc.CodeBlock(content, pandoc.Attr("", classes, {}))
-      else
-        return pandoc.Para({
-          pandoc.Emph({pandoc.Str("[Code file not found: " .. file_path .. "]")})
-        })
-      end
+    local content, lang_hint, err_path = parse_codefile(text)
+    if content then
+      local classes = (lang_hint and lang_hint ~= "") and {lang_hint} or {}
+      return pandoc.CodeBlock(content, pandoc.Attr("", classes, {}))
+    elseif err_path then
+      return pandoc.Para({pandoc.Emph({pandoc.Str("[Code file not found: " .. err_path .. "]")})})
     end
   end
 
@@ -1033,40 +681,29 @@ function RawBlock(raw)
 end
 
 -- =====================================================================
---  RawInline handler — inline commands
+--  RawInline handler
 -- =====================================================================
 
 function RawInline(raw)
   if raw.format ~= "latex" then return nil end
   local text = raw.text
 
-  -- -------------------------------------------------------------------
-  --  \inlinecode{x}  →  Code("x")
-  -- -------------------------------------------------------------------
+  -- \inlinecode{x}  →  Code("x")
   do
     local arg = text:match("\\inlinecode%s*(%b{})")
-    if arg then
-      local content = arg:sub(2, -2) -- strip outer braces
-      return pandoc.Code(content)
-    end
+    if arg then return pandoc.Code(arg:sub(2, -2)) end
   end
 
-  -- -------------------------------------------------------------------
-  --  \menu{A, B, C}  →  **A** → **B** → **C**
-  -- -------------------------------------------------------------------
+  -- \menu{A, B, C}  →  **A** → **B** → **C**
   do
     local arg = text:match("\\menu%s*(%b{})")
     if arg then
-      local content = arg:sub(2, -2) -- strip outer braces
       local inlines = pandoc.Inlines({})
       local first = true
-      -- Split on comma (respecting braces)
-      for item in content:gmatch("([^,]+)") do
+      for item in arg:sub(2, -2):gmatch("([^,]+)") do
         item = trim(item)
         if item ~= "" then
-          if not first then
-            inlines:insert(pandoc.Str(" → "))
-          end
+          if not first then inlines:insert(pandoc.Str(" → ")) end
           inlines:insert(pandoc.Strong({pandoc.Str(item)}))
           first = false
         end
@@ -1075,48 +712,31 @@ function RawInline(raw)
     end
   end
 
-  -- -------------------------------------------------------------------
-  --  \badge{x}  →  format-specific span
-  -- -------------------------------------------------------------------
+  -- \badge{x}  →  format-specific span
   do
     local arg = text:match("\\badge%s*(%b{})")
     if arg then
       local content = arg:sub(2, -2)
-      if FORMAT:match("docx") then
-        return pandoc.Span(
-          pandoc.Inlines({pandoc.Str(content)}),
-          pandoc.Attr("", {"badge"}, {})
-        )
-      elseif FORMAT:match("html5") then
-        return pandoc.Span(
-          pandoc.Inlines({pandoc.Str(content)}),
-          pandoc.Attr("", {"badge"}, {})
-        )
+      if FORMAT:match("docx") or FORMAT:match("html5") then
+        return pandoc.Span(pandoc.Inlines({pandoc.Str(content)}), pandoc.Attr("", {"badge"}, {}))
       else
-        -- Markdown: [x]
         return pandoc.Inlines({pandoc.Str("[" .. content .. "]")})
       end
     end
   end
 
-  -- -------------------------------------------------------------------
-  --  \note{x}  →  italic text with "Note: " prefix
-  -- -------------------------------------------------------------------
+  -- \note{x}  →  italic text with "Note: " prefix
   do
     local arg = text:match("\\note%s*(%b{})")
     if arg then
-      local content = arg:sub(2, -2)
       local inlines = pandoc.Inlines({pandoc.Str("Note: ")})
-      inlines:extend(parse_latex_inlines(content))
+      inlines:extend(parse_latex_inlines(arg:sub(2, -2)))
       return pandoc.Emph(inlines)
     end
   end
 
-  -- -------------------------------------------------------------------
-  --  \weblink{url}{text}  →  Link
-  -- -------------------------------------------------------------------
+  -- \weblink{url}{text}  →  Link
   do
-    -- Match \weblink{url}{text} using balanced braces
     local start = text:find("\\weblink%s*{")
     if start then
       local brace1 = text:find("{", start)
@@ -1125,172 +745,55 @@ function RawInline(raw)
         if url then
           local brace2 = text:find("{", end1 + 1)
           if brace2 then
-            local link_text, _ = parse_brace_arg(text, brace2 + 1)
-            if link_text then
-              local inlines = parse_latex_inlines(link_text)
-              return pandoc.Link(inlines, url)
-            end
+            local link_text = parse_brace_arg(text, brace2 + 1)
+            if link_text then return pandoc.Link(parse_latex_inlines(link_text), url) end
           end
         end
       end
     end
   end
 
-  -- -------------------------------------------------------------------
-  --  \param{x}  →  italic text
-  -- -------------------------------------------------------------------
+  -- \param{x}  →  italic text
   do
     local arg = text:match("\\param%s*(%b{})")
-    if arg then
-      local content = arg:sub(2, -2)
-      local inlines = parse_latex_inlines(content)
-      return pandoc.Emph(inlines)
-    end
+    if arg then return pandoc.Emph(parse_latex_inlines(arg:sub(2, -2))) end
   end
 
-  -- -------------------------------------------------------------------
-  --  \image[opts]{file}  →  Image (ignore optional dimensions)
-  -- -------------------------------------------------------------------
+  -- \image, \imagecap  →  Image (inline)
+  -- \imageplaceholder  →  Emph placeholder text (inline)
   do
-    -- With optional args: \image[...]{file}
-    local file = text:match("\\image%s*%b[]%s*(%b{})")
-    if not file then
-      -- Without optional args: \image{file}
-      file = text:match("\\image%s*(%b{})")
-    end
-    if file then
-      local path = file:sub(2, -2) -- strip outer braces
-      -- Use just the filename as alt text
-      local basename = path:match("([^/]+)$") or path
-      return pandoc.Image(pandoc.Inlines({pandoc.Str(basename)}), path)
-    end
-  end
-
-  -- -------------------------------------------------------------------
-  --  \imagecap[opts]{file}{caption}  →  Image with caption
-  -- -------------------------------------------------------------------
-  do
-    local start = text:find("\\imagecap%s*")
-    if start then
-      -- Skip optional [...]
-      local pos = start + #("\\imagecap")
-      local opt_bracket = text:find("%[", pos)
-      local after_opts = pos
-      if opt_bracket and opt_bracket < (text:find("{", pos) or math.huge) then
-        -- Skip balanced brackets
-        local depth = 0
-        local i = opt_bracket
-        while i <= #text do
-          local c = text:sub(i, i)
-          if c == "[" then depth = depth + 1
-          elseif c == "]" then
-            depth = depth - 1
-            if depth == 0 then after_opts = i + 1; break end
-          end
-          i = i + 1
-        end
-      end
-
-      -- Parse {file}
-      local brace1 = text:find("{", after_opts)
-      if brace1 then
-        local file_path, end1 = parse_brace_arg(text, brace1 + 1)
-        if file_path then
-          -- Parse {caption}
-          local brace2 = text:find("{", end1 + 1)
-          if brace2 then
-            local caption_text, _ = parse_brace_arg(text, brace2 + 1)
-            if caption_text then
-              local caption_inlines = parse_latex_inlines(caption_text)
-              return pandoc.Image(caption_inlines, file_path)
-            end
-          end
-        end
-      end
-    end
-  end
-
-  -- -------------------------------------------------------------------
-  --  \imageplaceholder{path}{desc}  →  italic placeholder text
-  -- -------------------------------------------------------------------
-  do
-    local start = text:find("\\imageplaceholder%s*{")
-    if start then
-      local brace1 = text:find("{", start)
-      if brace1 then
-        local path, end1 = parse_brace_arg(text, brace1 + 1)
-        if path then
-          local brace2 = text:find("{", end1 + 1)
-          if brace2 then
-            local desc, _ = parse_brace_arg(text, brace2 + 1)
-            if desc then
-              return pandoc.Emph({
-                pandoc.Str("[Image placeholder: " .. path .. " — " .. desc .. "]")
-              })
-            end
-          end
-        end
-      end
-    end
-  end
-
-  -- -------------------------------------------------------------------
-  --  \codefile[lang]{file}  →  read file, return Code (inline fallback)
-  --  When \codefile appears as RawInline, we return inline Code.
-  --  The second-pass filter handles the RawBlock case (→ CodeBlock).
-  -- -------------------------------------------------------------------
-  do
-    local lang_hint, file_arg
-    -- With optional lang: \codefile[lang]{file}
-    lang_hint, file_arg = text:match("\\codefile%s*%[([^%]]*)%]%s*(%b{})")
-    if not lang_hint then
-      -- Without lang: \codefile{file}
-      file_arg = text:match("\\codefile%s*(%b{})")
-    end
-    if file_arg then
-      local file_path = file_arg:sub(2, -2)
-      local content = read_file(file_path)
-      if content then
-        local classes = {}
-        if lang_hint and lang_hint ~= "" then
-          classes = {lang_hint}
-        end
-        -- Return inline Code with "codefile" marker class.
-        -- The Pandoc function will promote multi-line codefile Code inlines
-        -- to CodeBlocks (splitting the surrounding Para if needed).
-        local all_classes = {"codefile"}
-        for _, c in ipairs(classes) do
-          table.insert(all_classes, c)
-        end
-        return pandoc.Code(content, pandoc.Attr("", all_classes, {}))
+    local caption, path, is_placeholder, desc = parse_image(text)
+    if caption and path then
+      if is_placeholder then
+        return pandoc.Emph({pandoc.Str("[Image placeholder: " .. path .. " — " .. desc .. "]")})
       else
-        return pandoc.Emph({pandoc.Str("[Code file not found: " .. file_path .. "]")})
+        return pandoc.Image(caption, path)
       end
     end
   end
 
-  -- -------------------------------------------------------------------
-  --  Strip preamble/structural commands that appear as inline raw
-  -- -------------------------------------------------------------------
-  for cmd, _ in pairs(strip_commands) do
-    if text:match("^%s*\\" .. cmd .. "%s*%[") or
-       text:match("^%s*\\" .. cmd .. "%s*{") or
-       text:match("^%s*\\" .. cmd .. "%s*$") then
-      return pandoc.Inlines({})
+  -- \codefile[lang]{file}  →  Code inline with "codefile" marker class
+  -- (promote_codefile_inlines in the Pandoc function promotes
+  -- multi-line codefile Code inlines to CodeBlocks)
+  do
+    local content, lang_hint, err_path = parse_codefile(text)
+    if content then
+      local classes = {"codefile"}
+      if lang_hint and lang_hint ~= "" then table.insert(classes, lang_hint) end
+      return pandoc.Code(content, pandoc.Attr("", classes, {}))
+    elseif err_path then
+      return pandoc.Emph({pandoc.Str("[Code file not found: " .. err_path .. "]")})
     end
   end
+
+  -- Strip preamble/structural commands that appear as inline raw
+  if is_strip_cmd(text) then return pandoc.Inlines({}) end
 
   return nil
 end
 
--- =====================================================================
---  Set up inner filter for walking parsed LaTeX content
---  (must be after RawInline/RawBlock definitions)
--- =====================================================================
-
-inner_filter = {
-  RawInline = RawInline,
-  RawBlock = RawBlock,
-}
+-- Set up inner filter for walking parsed LaTeX content
+-- (must be after RawInline/RawBlock definitions)
+inner_filter = { RawInline = RawInline, RawBlock = RawBlock }
 
 -- Global functions Pandoc/RawBlock/RawInline are auto-discovered by pandoc.
