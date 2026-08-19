@@ -12,13 +12,19 @@
 #   make clean-project DIR=examples/my-guide — clean a specific project
 
 .PHONY: all samples examples pt en setup-guide project
-.PHONY: clean clean-samples clean-examples clean-pt clean-en clean-setup-guide clean-project
+.PHONY: docx docx-pt docx-en md md-pt md-en html html-pt html-en all-formats
+.PHONY: clean clean-samples clean-examples clean-pt clean-en clean-setup-guide clean-project clean-formats
 
 PT_DIR   = examples/guide/pt
 EN_DIR   = examples/guide/en
 SG_DIR   = examples/setup-guide
 
-all: samples examples
+PANDOC      = pandoc
+LUA_FILTER  = templates/guide/guide-pandoc.lua
+REF_DOCX    = templates/guide/guide-reference.docx
+HTML_TMPL   = templates/guide/guide-template.html
+
+all: samples examples all-formats
 
 samples: pt en
 
@@ -50,8 +56,34 @@ project:
 		cd $(DIR) && latexmk $(FILE); \
 	fi
 
+# ── Multi-format output ──────────────────────────────────────────────
+
+docx-pt:
+	cd examples/guide/pt && $(PANDOC) -f latex+raw_tex --lua-filter=../../../$(LUA_FILTER) --reference-doc=../../../$(REF_DOCX) -t docx main.tex -o main.docx
+
+docx-en:
+	cd examples/guide/en && $(PANDOC) -f latex+raw_tex --lua-filter=../../../$(LUA_FILTER) --reference-doc=../../../$(REF_DOCX) -t docx main.tex -o main.docx
+
+md-pt:
+	cd examples/guide/pt && $(PANDOC) -f latex+raw_tex --lua-filter=../../../$(LUA_FILTER) -t markdown --wrap=none main.tex -o main.md
+
+md-en:
+	cd examples/guide/en && $(PANDOC) -f latex+raw_tex --lua-filter=../../../$(LUA_FILTER) -t markdown --wrap=none main.tex -o main.md
+
+html-pt:
+	cd examples/guide/pt && $(PANDOC) -f latex+raw_tex --lua-filter=../../../$(LUA_FILTER) --template=../../../$(HTML_TMPL) -s -t html5 main.tex -o main.html
+
+html-en:
+	cd examples/guide/en && $(PANDOC) -f latex+raw_tex --lua-filter=../../../$(LUA_FILTER) --template=../../../$(HTML_TMPL) -s -t html5 main.tex -o main.html
+
+docx: docx-pt docx-en
+md: md-pt md-en
+html: html-pt html-en
+
+all-formats: docx md html
+
 # ── Clean targets ──
-clean: clean-samples clean-examples
+clean: clean-samples clean-examples clean-formats
 
 clean-samples: clean-pt clean-en
 
@@ -76,3 +108,8 @@ clean-project:
 	else \
 		cd $(DIR) && latexmk -C $(FILE); \
 	fi
+
+clean-formats:
+	rm -f examples/guide/pt/main.docx examples/guide/pt/main.md examples/guide/pt/main.html
+	rm -f examples/guide/en/main.docx examples/guide/en/main.md examples/guide/en/main.html
+	rm -f examples/setup-guide/setup-guide.docx examples/setup-guide/setup-guide.md examples/setup-guide/setup-guide.html

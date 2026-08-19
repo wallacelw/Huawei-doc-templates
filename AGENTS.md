@@ -119,6 +119,18 @@ approval. Changing them breaks existing documents and reproducibility.
 - Do not add `\RequirePackage` calls inside `.sty` modules — all packages are loaded
   by the template class file.
 
+### L16. Multi-format output via Pandoc + Lua filter
+- LaTeX remains the single source of truth. DOCX, Markdown, and HTML are
+  generated outputs, not hand-edited.
+- The Lua filter `templates/guide/guide-pandoc.lua` translates all custom
+  commands and environments to Pandoc AST elements.
+- The filter uses **global functions** (`Pandoc`, `RawBlock`, `RawInline`) —
+  do NOT add a `return` table at the end; return tables silently fail.
+- Format check is `raw.format ~= "latex"` (not `"tex"`).
+- `make all-formats` generates all 6 outputs (MD + DOCX + HTML for pt + en).
+- Generated outputs are gitignored (build artifacts). Only the filter, reference
+  DOCX, HTML template, and Python script are committed.
+
 ---
 
 ## Project structure
@@ -142,6 +154,10 @@ approval. Changing them breaks existing documents and reproducibility.
         +-- README.md         # human-readable docs
         +-- guide.cls         # all formatting lives here
         +-- .latexmkrc        # XeLaTeX, TZ=America/Sao_Paulo
+        +-- guide-pandoc.lua  # Pandoc Lua filter for multi-format output
+        +-- create-reference-docx.py  # generates guide-reference.docx
+        +-- guide-reference.docx      # DOCX custom styles reference
+        +-- guide-template.html       # HTML template with Huawei CSS
         +-- common-assets/      # logos, sample images, example scripts
 +-- documents/               # user-created documents (one subfolder per doc)
 +-- examples/                 # all example documents and samples
@@ -170,6 +186,18 @@ approval. Changing them breaks existing documents and reproducibility.
 - Template `.latexmkrc` files: `$ENV{TZ} = "America/Sao_Paulo"` (locked, see L4).
 - Project `.latexmkrc` files: can override TZ (last one wins).
 - `\today` and `\time` respect the TZ environment variable.
+
+### Multi-format output (DOCX, Markdown, HTML)
+- LaTeX is the source of truth; other formats are generated via Pandoc + Lua filter.
+- Requires `pandoc >= 3.0` and the Lua filter at `templates/guide/guide-pandoc.lua`.
+- Generate all formats: `make all-formats` (produces MD, DOCX, HTML for pt + en).
+- Individual formats: `make md`, `make docx`, `make html`.
+- The filter translates all custom commands (`\makecover`, `\infobox`, `\objective`,
+  `\stepbystep`, `\image`, `\note`, `\hutable`, `\codefile`, `\badge`, `\menu`,
+  `\changelog`, etc.) to Pandoc AST elements.
+- DOCX uses custom styles from `guide-reference.docx`; HTML uses `guide-template.html`.
+- Generated outputs are gitignored; only the filter, reference DOCX, HTML template,
+  and Python script are committed.
 
 ---
 

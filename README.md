@@ -81,6 +81,35 @@ $ENV{TZ} = "UTC";  # override the template default
 
 Pass the `[notime]` class option to hide the time on the cover page.
 
+## Multi-format output (DOCX, Markdown, HTML)
+
+LaTeX is the source of truth. DOCX, Markdown, and HTML are generated via
+[Pandoc](https://pandoc.org/) + a Lua filter that translates all custom
+commands to Pandoc AST elements.
+
+### Requirements
+
+- `pandoc >= 3.0` (install via `install.sh` or your package manager)
+
+### Usage
+
+```bash
+make all-formats    # MD + DOCX + HTML for both pt and en samples
+make md             # Markdown only (pt + en)
+make docx           # DOCX only (pt + en)
+make html           # HTML only (pt + en)
+make clean-formats  # remove generated multi-format files
+```
+
+The Lua filter (`templates/guide/guide-pandoc.lua`) handles all custom
+commands: `\makecover`, `\infobox`, `\objective`, `\stepbystep`, `\image`,
+`\note`, `\hutable`, `\codefile`, `\badge`, `\menu`, `\changelog`, and more.
+DOCX uses custom styles from `guide-reference.docx`; HTML uses
+`guide-template.html` with Huawei brand CSS.
+
+Generated outputs are gitignored (build artifacts). Only the filter, reference
+DOCX, HTML template, and Python script are committed.
+
 ## VS Code (optional)
 
 The repo ships `.vscode/settings.json` pre-configured for **latexmk (XeLaTeX)**.

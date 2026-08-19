@@ -499,6 +499,24 @@ The project's `.latexmkrc` sets `TEXINPUTS` to the template directory so
 `guide.cls` and `assets/` are found. The existing `examples/guide/pt/` and
 `examples/guide/en/` folders are pre-configured examples.
 
+### Multi-format output (DOCX, Markdown, HTML)
+
+LaTeX is the source of truth. DOCX, Markdown, and HTML are generated via
+Pandoc + the Lua filter at `templates/guide/guide-pandoc.lua`.
+
+```bash
+# From the repo root:
+make all-formats    # MD + DOCX + HTML for both pt and en
+make md             # Markdown only
+make docx           # DOCX only
+make html           # HTML only
+```
+
+Requires `pandoc >= 3.0`. The filter translates all custom commands
+(`\makecover`, `\infobox`, `\objective`, `\stepbystep`, `\image`, `\note`,
+`\hutable`, `\codefile`, `\badge`, `\menu`, `\changelog`, etc.) to Pandoc
+AST elements. Generated outputs are gitignored (build artifacts).
+
 ---
 
 ## Customization pointers (when the user asks to change the look)
