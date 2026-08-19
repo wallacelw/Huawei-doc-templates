@@ -66,9 +66,24 @@ make samples         # compile PT + EN samples
 make examples        # compile setup-guide, copy PDF to repo root
 make                 # all of the above
 make project DIR=examples/my-guide   # compile a specific project (auto-detects .tex)
+make menu            # interactive format selection (PDF/DOCX/MD/HTML)
 make clean           # remove all build artifacts
 make clean-pt        # clean specific project
 ```
+
+### Interactive build menu
+
+Use `build.sh` to interactively select which output formats to generate:
+
+```bash
+./build.sh examples/guide/en    # interactive menu for the EN sample
+./build.sh --all examples/guide/en   # non-interactive: all formats
+./build.sh --pdf --docx examples/guide/pt   # non-interactive: PDF + DOCX only
+make menu                       # invokes build.sh in interactive mode
+```
+
+The menu shows PDF, DOCX, Markdown, and HTML options. Enter one or more
+numbers (e.g., `1 3 4` for PDF + MD + HTML), or `all` for everything.
 
 ## Timezone
 

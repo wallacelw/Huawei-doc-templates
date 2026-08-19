@@ -139,6 +139,7 @@ approval. Changing them breaks existing documents and reproducibility.
 .
 +-- AGENTS.md               # this file
 +-- install.sh               # one-command setup
++-- build.sh                 # interactive format selection menu
 +-- Makefile                 # build convenience (make samples/examples/clean)
 +-- opencode.json            # skill discovery (scans templates/)
 +-- README.md                # comprehensive guide for all templates
@@ -192,6 +193,8 @@ approval. Changing them breaks existing documents and reproducibility.
 - Requires `pandoc >= 3.0` and the Lua filter at `templates/guide/guide-pandoc.lua`.
 - Generate all formats: `make all-formats` (produces MD, DOCX, HTML for pt + en).
 - Individual formats: `make md`, `make docx`, `make html`.
+- Interactive menu: `make menu` or `./build.sh [project-dir]` — select formats interactively.
+- Non-interactive: `./build.sh --pdf --docx [project-dir]`.
 - The filter translates all custom commands (`\makecover`, `\infobox`, `\objective`,
   `\stepbystep`, `\image`, `\note`, `\hutable`, `\codefile`, `\badge`, `\menu`,
   `\changelog`, etc.) to Pandoc AST elements.
