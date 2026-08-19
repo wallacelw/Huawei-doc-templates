@@ -36,6 +36,9 @@
 examples/guide/*/main.md
 examples/guide/*/main.docx
 examples/guide/*/main.html
+examples/setup-guide/setup-guide.md
+examples/setup-guide/setup-guide.docx
+examples/setup-guide/setup-guide.html
 # User documents — ignore everything in documents/ except README.md
 documents/*
 !documents/README.md

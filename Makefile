@@ -11,7 +11,7 @@
 #   make clean-pt / clean-en / clean-setup-guide — clean specific targets
 #   make clean-project DIR=examples/my-guide — clean a specific project
 
-.PHONY: all samples examples pt en setup-guide project
+.PHONY: all samples examples pt en setup-guide project menu
 .PHONY: docx docx-pt docx-en md md-pt md-en html html-pt html-en all-formats
 .PHONY: clean clean-samples clean-examples clean-pt clean-en clean-setup-guide clean-project clean-formats
 
@@ -25,6 +25,10 @@ REF_DOCX    = templates/guide/guide-reference.docx
 HTML_TMPL   = templates/guide/guide-template.html
 
 all: samples examples all-formats
+
+# ── Interactive build menu ──
+menu:
+	./build.sh
 
 samples: pt en
 
@@ -112,4 +116,3 @@ clean-project:
 clean-formats:
 	rm -f examples/guide/pt/main.docx examples/guide/pt/main.md examples/guide/pt/main.html
 	rm -f examples/guide/en/main.docx examples/guide/en/main.md examples/guide/en/main.html
-	rm -f examples/setup-guide/setup-guide.docx examples/setup-guide/setup-guide.md examples/setup-guide/setup-guide.html

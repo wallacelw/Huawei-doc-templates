@@ -8,8 +8,8 @@
 ---    pandoc --lua-filter=guide-pandoc.lua -f latex+raw_tex -t markdown input.tex
 ---    pandoc --lua-filter=guide-pandoc.lua -f latex+raw_tex -t html5  input.tex
 ---
----  Requires pandoc >= 2.10 (Table Cell/Row API).
----  Most features work with pandoc >= 2.9; hutable requires >= 2.10.
+---  Requires pandoc >= 3.0 (Table Cell/Row API).
+---  Most features work with pandoc >= 2.9; hutable requires >= 3.0.
 --- =====================================================================
 
 -- =====================================================================
@@ -153,7 +153,7 @@ local function preprocess_latex(text)
         table.insert(parts, "\\textbf{" .. item .. "}")
       end
     end
-    return table.concat(parts, " $\\rightarrow$ ")
+    return table.concat(parts, " \\textbf{→} ")
   end)
   -- \weblink{url}{text} → \href{url}{text}
   text = text:gsub("\\weblink%s*(%b{})%s*(%b{})", function(url_arg, text_arg)
@@ -419,10 +419,8 @@ function Pandoc(doc)
     local new_blocks = pandoc.Blocks({})
     for _, blk in ipairs(blocks) do
       if blk.t == "Para" then
-        -- Check if any inline is a Code with "codefile" class
-        local codefile_idx = nil
-        local codefile_content = nil
-        local codefile_classes = nil
+        -- Collect all Code inlines with "codefile" class
+        local codefile_positions = {}
 
         for i, inl in ipairs(blk.content) do
           if inl.t == "Code" then
@@ -431,38 +429,47 @@ function Pandoc(doc)
               if cls == "codefile" then has_codefile = true end
             end
             if has_codefile then
-              codefile_idx = i
-              codefile_content = inl.text
               -- Build classes list without the "codefile" marker
-              codefile_classes = {}
+              local codefile_classes = {}
               for _, cls in ipairs(inl.classes) do
                 if cls ~= "codefile" then
                   table.insert(codefile_classes, cls)
                 end
               end
-              break
+              table.insert(codefile_positions, {
+                idx = i,
+                text = inl.text,
+                classes = codefile_classes,
+              })
             end
           end
         end
 
-        if codefile_idx then
-          -- Text before the Code → separate Para
-          if codefile_idx > 1 then
-            local before = pandoc.Inlines({})
-            for i = 1, codefile_idx - 1 do
-              before:insert(blk.content[i])
+        if #codefile_positions > 0 then
+          -- Split the Para into multiple blocks at each codefile position
+          local prev_end = 0
+          for _, cf in ipairs(codefile_positions) do
+            -- Text before this Code → separate Para
+            if cf.idx > prev_end + 1 then
+              local before = pandoc.Inlines({})
+              for i = prev_end + 1, cf.idx - 1 do
+                before:insert(blk.content[i])
+              end
+              new_blocks:insert(pandoc.Para(before))
             end
-            new_blocks:insert(pandoc.Para(before))
+
+            -- Code → CodeBlock
+            new_blocks:insert(pandoc.CodeBlock(cf.text,
+              pandoc.Attr("", cf.classes, {})))
+
+            prev_end = cf.idx
           end
 
-          -- Code → CodeBlock
-          new_blocks:insert(pandoc.CodeBlock(codefile_content,
-            pandoc.Attr("", codefile_classes, {})))
-
-          -- Text after the Code → separate Para
-          if codefile_idx < #blk.content then
+          -- Text after the last Code → separate Para
+          local last_idx = codefile_positions[#codefile_positions].idx
+          if last_idx < #blk.content then
             local after = pandoc.Inlines({})
-            for i = codefile_idx + 1, #blk.content do
+            for i = last_idx + 1, #blk.content do
               after:insert(blk.content[i])
             end
             new_blocks:insert(pandoc.Para(after))
@@ -681,6 +688,71 @@ function RawBlock(raw)
         end
       end
 
+      -- Handle last row without trailing \\
+      -- Check if there's remaining content after the last \\
+      local after_last_sep = cleaned:match("\\\\%s*(.*)$")
+      if after_last_sep then
+        after_last_sep = trim(after_last_sep)
+        if after_last_sep ~= "" then
+          -- Split on & (column separator)
+          local cells = {}
+          local cell_start = 1
+          local depth = 0
+          for i = 1, #after_last_sep do
+            local c = after_last_sep:sub(i, i)
+            if c == "{" then depth = depth + 1
+            elseif c == "}" then depth = depth - 1
+            elseif c == "&" and depth == 0 then
+              local cell = trim(after_last_sep:sub(cell_start, i - 1))
+              table.insert(cells, cell)
+              cell_start = i + 1
+            end
+          end
+          -- Last cell
+          local cell = trim(after_last_sep:sub(cell_start))
+          table.insert(cells, cell)
+
+          -- Pad or trim to num_cols
+          while #cells < num_cols do
+            table.insert(cells, "")
+          end
+          while #cells > num_cols do
+            table.remove(cells)
+          end
+
+          table.insert(rows, cells)
+        end
+      elseif #rows == 0 and cleaned ~= "" then
+        -- No \\ at all — treat entire content as a single row
+        local row_str = trim(cleaned)
+        if row_str ~= "" then
+          local cells = {}
+          local cell_start = 1
+          local depth = 0
+          for i = 1, #row_str do
+            local c = row_str:sub(i, i)
+            if c == "{" then depth = depth + 1
+            elseif c == "}" then depth = depth - 1
+            elseif c == "&" and depth == 0 then
+              local cell = trim(row_str:sub(cell_start, i - 1))
+              table.insert(cells, cell)
+              cell_start = i + 1
+            end
+          end
+          local cell = trim(row_str:sub(cell_start))
+          table.insert(cells, cell)
+
+          while #cells < num_cols do
+            table.insert(cells, "")
+          end
+          while #cells > num_cols do
+            table.remove(cells)
+          end
+
+          table.insert(rows, cells)
+        end
+      end
+
       if #rows > 0 then
         -- First row = header, rest = body
         local header_row = table.remove(rows, 1)
@@ -736,6 +808,9 @@ function RawBlock(raw)
         end
         -- Fallback: return as a code block
         return pandoc.CodeBlock(md_table)
+      else
+        -- Empty table: return a warning paragraph
+        return pandoc.Para({pandoc.Str("[Empty table]")})
       end
     end
   end
@@ -1025,13 +1100,14 @@ function RawInline(raw)
   end
 
   -- -------------------------------------------------------------------
-  --  \note{x}  →  italic text
+  --  \note{x}  →  italic text with "Note: " prefix
   -- -------------------------------------------------------------------
   do
     local arg = text:match("\\note%s*(%b{})")
     if arg then
       local content = arg:sub(2, -2)
-      local inlines = parse_latex_inlines(content)
+      local inlines = pandoc.Inlines({pandoc.Str("Note: ")})
+      inlines:extend(parse_latex_inlines(content))
       return pandoc.Emph(inlines)
     end
   end
@@ -1217,46 +1293,4 @@ inner_filter = {
   RawBlock = RawBlock,
 }
 
--- =====================================================================
---  Post-processing filter: handle \codefile as RawBlock
---  \codefile may appear as a RawBlock (block-level) or RawInline.
---  The RawInline handler above returns inline Code; this second-pass
---  filter handles the block-level case, returning a proper CodeBlock.
--- =====================================================================
-
-local codefile_block_filter = {
-  RawBlock = function(raw)
-    if raw.format ~= "latex" then return nil end
-    local text = raw.text
-
-    -- \codefile[lang]{file}
-    local lang_hint, file_arg = text:match("\\codefile%s*%[([^%]]*)%]%s*(%b{})")
-    if not lang_hint then
-      file_arg = text:match("\\codefile%s*(%b{})")
-    end
-    if file_arg then
-      local file_path = file_arg:sub(2, -2)
-      local content = read_file(file_path)
-      if content then
-        local classes = {}
-        if lang_hint and lang_hint ~= "" then
-          classes = {lang_hint}
-        end
-        return pandoc.CodeBlock(content, pandoc.Attr("", classes, {}))
-      else
-        return pandoc.Para({
-          pandoc.Emph({pandoc.Str("[Code file not found: " .. file_path .. "]")})
-        })
-      end
-    end
-
-    return nil
-  end
-}
-
--- =====================================================================
---  Return the filter chain
--- =====================================================================
-
--- Return the filter (using global functions, no return table)
--- Pandoc auto-discovers global Pandoc/RawBlock/RawInline functions
+-- Global functions Pandoc/RawBlock/RawInline are auto-discovered by pandoc.

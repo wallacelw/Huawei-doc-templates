@@ -215,6 +215,14 @@ $endif$
       color: #555;
     }
 
+    /* ── Version ─────────────────────────────────────────────── */
+    .version {
+      font-size: 9pt;
+      color: #888;
+      margin-top: 2pt;
+      margin-bottom: 0;
+    }
+
     /* ── Lists ────────────────────────────────────────────────── */
     ul, ol {
       margin: 6pt 0;
@@ -319,6 +327,7 @@ $endfor$
 $if(date)$
   <p class="date">$date$</p>
 $endif$
+$if(doc-version)$<p class="version">v$doc-version$</p>$endif$
 $if(toc)$
   <nav id="toc">
     $toc$

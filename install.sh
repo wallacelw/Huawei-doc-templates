@@ -144,6 +144,7 @@ $SUDO apt-get install -y \
     fonts-cascadia-code \
     poppler-utils \
     pandoc \
+    python3-docx \
     2>&1 | tail -3
 
 log_done "TeX Live packages installed"
