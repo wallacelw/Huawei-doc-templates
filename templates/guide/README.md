@@ -107,4 +107,5 @@ Two samples demonstrate all commands and environments:
 - [`examples/guide/pt/main.tex`](../../examples/guide/pt/main.tex) — Portuguese
 - [`examples/guide/en/main.tex`](../../examples/guide/en/main.tex) — English
 
-Compile with `latexmk main.tex` from either folder.
+Compile with `make pt` / `make en` from the repo root, or `latexmk main.tex`
+from either folder.

@@ -52,15 +52,7 @@ to create a new guide document.
 
 ## Compilation
 
-### Using latexmk (recommended)
-
-```bash
-cd examples/guide/pt && latexmk main.tex   # Portuguese sample
-cd examples/guide/en && latexmk main.tex   # English sample
-cd examples/setup-guide && latexmk setup-guide.tex   # setup guide
-```
-
-### Using the Makefile
+### Using the Makefile (recommended)
 
 ```bash
 make pt              # compile Portuguese sample only
@@ -70,9 +62,17 @@ make samples         # compile PT + EN samples
 make examples        # compile setup-guide, copy PDF to repo root
 make                 # all of the above
 make project DIR=examples/my-guide   # compile a specific project (auto-detects .tex)
-make menu            # interactive format selection (PDF/DOCX/MD/HTML)
+make menu            # interactive format selection (PDF/DOCX/MD/HTML/EPUB)
 make clean           # remove all build artifacts
 make clean-pt        # clean specific project
+```
+
+### Using latexmk directly
+
+```bash
+cd examples/guide/pt && latexmk main.tex   # Portuguese sample
+cd examples/guide/en && latexmk main.tex   # English sample
+cd examples/setup-guide && latexmk setup-guide.tex   # setup guide
 ```
 
 ### Interactive build menu
@@ -86,7 +86,7 @@ Use `build.sh` to interactively select which output formats to generate:
 make menu                       # invokes build.sh in interactive mode
 ```
 
-The menu shows PDF, DOCX, Markdown, and HTML options. Enter one or more
+The menu shows PDF, DOCX, Markdown, HTML, and EPUB options. Enter one or more
 numbers (e.g., `1 3 4` for PDF + MD + HTML), or `all` for everything.
 
 ## Timezone
@@ -100,9 +100,9 @@ $ENV{TZ} = "UTC";  # override the template default
 
 Pass the `[notime]` class option to hide the time on the cover page.
 
-## Multi-format output (DOCX, Markdown, HTML)
+## Multi-format output (DOCX, Markdown, HTML, EPUB)
 
-LaTeX is the source of truth. DOCX, Markdown, and HTML are generated via
+LaTeX is the source of truth. DOCX, Markdown, HTML, and EPUB are generated via
 [Pandoc](https://pandoc.org/) + a Lua filter that translates all custom
 commands to Pandoc AST elements.
 
@@ -113,10 +113,11 @@ commands to Pandoc AST elements.
 ### Usage
 
 ```bash
-make all-formats    # MD + DOCX + HTML for both pt and en samples
+make all-formats    # MD + DOCX + HTML + EPUB for both pt and en samples
 make md             # Markdown only (pt + en)
 make docx           # DOCX only (pt + en)
 make html           # HTML only (pt + en)
+make epub           # EPUB only (pt + en)
 make clean-formats  # remove generated multi-format files
 ```
 
@@ -161,7 +162,7 @@ and environment reference.
 │   └── guide/               # self-contained template + skill
 │       ├── SKILL.md          # opencode skill + agent command reference
 │       ├── README.md         # template-specific details (brief)
-│       ├── guide.cls         # the class — all formatting lives here
+│       ├── guide.cls         # guide-specific formatting (cover, TOC, titles)
 │       ├── .latexmkrc        # latexmk config (XeLaTeX, TZ=America/Sao_Paulo)
 │       └── common-assets/      # logos, sample images, example scripts
 ├── documents/               # user-created documents (one subfolder per doc)

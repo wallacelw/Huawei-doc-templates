@@ -28,7 +28,7 @@ project context:
 2. **`README.md`** (repo root) — project setup, compilation instructions,
    install steps, and project layout. Needed to understand the toolchain and
    folder conventions.
-3. **`AGENTS.md`** (repo root) — locked decisions (L1–L15), file editing
+3. **`AGENTS.md`** (repo root) — locked decisions (L1–L17), file editing
    rules, versioning workflow, and project standards. These are mandatory
    constraints that must not be violated.
 
@@ -67,8 +67,8 @@ up in the class file and this SKILL.md.
          ```
      - `assets/` subfolder for project-specific images and code files.
 
-3. **Compile and verify** with `latexmk <filename>.tex` from inside the
-   project folder.
+3. **Compile and verify** with `make project DIR=documents/<project-name>`
+   (or `latexmk <filename>.tex` from inside the project folder).
 
 4. **Report** the page count and any warnings to the user.
 
@@ -199,8 +199,8 @@ test line in its first `infobox` that exercises every Portuguese accent
 sample, confirm no glyphs are missing:
 
 ```sh
-latexmk main.tex                       # from examples/guide/pt/
-grep -i "Missing character" main.log   # must produce no output
+make pt                               # compile Portuguese sample
+grep -i "Missing character" examples/guide/pt/main.log   # must produce no output
 ```
 
 XeLaTeX emits `Missing character: There is no <glyph>` for any code point the
@@ -420,7 +420,8 @@ changelog entry.** This ensures the PDF always reflects what changed and when.
    }
    ```
 
-4. **Recompile** with `latexmk main.tex` to produce the updated PDF.
+4. **Recompile** with `make project DIR=documents/<project-name>` to produce
+   the updated PDF.
 
 5. **Report** the new version number to the user.
 
@@ -482,15 +483,17 @@ rendered, but the content remains in the `.tex` file for future reference.
 
 ## Compilation
 
-From the project folder (wherever the user chose to create it):
+From the repo root (recommended):
+
+```bash
+make project DIR=documents/<project-name>   # compile a specific project
+make samples                                 # compile both samples
+```
+
+Or from inside the project folder:
 
 ```bash
 latexmk main.tex             # uses .latexmkrc → xelatex, auto two-pass
-```
-
-Or manually:
-```bash
-xelatex main.tex && xelatex main.tex   # two passes for TOC
 ```
 
 **Never use pdflatex** — the class loads `fontspec` which requires XeLaTeX.
@@ -499,17 +502,18 @@ The project's `.latexmkrc` sets `TEXINPUTS` to the template directory so
 `guide.cls` and `assets/` are found. The existing `examples/guide/pt/` and
 `examples/guide/en/` folders are pre-configured examples.
 
-### Multi-format output (DOCX, Markdown, HTML)
+### Multi-format output (DOCX, Markdown, HTML, EPUB)
 
-LaTeX is the source of truth. DOCX, Markdown, and HTML are generated via
+LaTeX is the source of truth. DOCX, Markdown, HTML, and EPUB are generated via
 Pandoc + the Lua filter at `templates/guide/guide-pandoc.lua`.
 
 ```bash
 # From the repo root:
-make all-formats    # MD + DOCX + HTML for both pt and en
+make all-formats    # MD + DOCX + HTML + EPUB for both pt and en
 make md             # Markdown only
 make docx           # DOCX only
 make html           # HTML only
+make epub           # EPUB only
 ```
 
 Requires `pandoc >= 3.0`. The filter translates all custom commands

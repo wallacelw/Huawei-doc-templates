@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Huawei-doc-templates project are documented here.
+All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
 ## v2.0.0 (2026-08-19)

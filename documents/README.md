@@ -11,7 +11,11 @@ with the templates in this project.
    ```
 2. The skill will create a subfolder here, e.g. `documents/my-guide/`,
    with all necessary files (`.tex`, `.latexmkrc`, `assets/`).
-3. Compile from inside the project folder:
+3. Compile from the repo root:
+   ```
+   make project DIR=documents/my-guide
+   ```
+   Or from inside the project folder:
    ```
    cd documents/my-guide
    latexmk main.tex

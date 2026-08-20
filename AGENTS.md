@@ -109,9 +109,20 @@ approval. Changing them breaks existing documents and reproducibility.
 - The filter uses **global functions** (`Pandoc`, `RawBlock`, `RawInline`) —
   do NOT add a `return` table at the end; return tables silently fail.
 - Format check is `raw.format ~= "latex"` (not `"tex"`).
-- `make all-formats` generates all 6 outputs (MD + DOCX + HTML for pt + en).
+- `make all-formats` generates all 8 outputs (MD + DOCX + HTML + EPUB for pt + en).
 - Generated outputs are gitignored (build artifacts). Only the filter, reference
   DOCX, HTML template, and Python script are committed.
+
+### L17. Version tag + validation after each change
+- After every change (bug fix, feature, docs edit), create a new git version tag
+  (e.g., `v2.0.1`, `v2.0.2`, `v2.1.0`).
+- Before tagging, validate: compile all samples (`make samples`), run all tests
+  (`./tests/test-filter.sh` and `./tests/round-trip.sh`), and verify 0 raw LaTeX
+  blocks in output.
+- Tag format: `v<major>.<minor>.<patch>` — patch for fixes, minor for features,
+  major for breaking changes.
+- Push the tag: `git push --tags`.
+- The tag is the release — there are no separate release branches.
 
 ---
 
@@ -156,7 +167,7 @@ major version bump, not a violation of a locked decision.
     +-- guide/               # the guide template
         +-- SKILL.md          # opencode skill + agent reference
         +-- README.md         # human-readable docs
-        +-- guide.cls         # all formatting lives here
+        +-- guide.cls         # guide-specific formatting (cover, TOC, titles)
         +-- .latexmkrc        # XeLaTeX, TZ=America/Sao_Paulo
         +-- guide-pandoc.lua  # Pandoc Lua filter for multi-format output
         +-- create-reference-docx.py  # generates guide-reference.docx
@@ -180,22 +191,24 @@ major version bump, not a violation of a locked decision.
 
 ## Compilation
 
-- **Always use `latexmk`** — it handles multi-pass (TOC, page numbers).
+- **Use `make` (recommended)** — wraps latexmk, handles multi-pass, and offers
+  format selection (`make menu`), multi-format output (`make all-formats`), and
+  cleanup (`make clean`).
 - **Never use `pdflatex`** — will fail on `fontspec`.
-- `xelatex` directly works but needs two manual runs for the TOC.
+- `latexmk` directly works but `make` is preferred for consistency.
 - `.latexmkrc` in each folder sets `$pdf_mode = 5` (xelatex) and `TEXINPUTS`.
-- Clean builds: `latexmk -C` (full clean), `latexmk -c` (aux only).
+- Clean builds: `make clean` (full clean), `latexmk -c` (aux only).
 
 ### Timezone
 - Template `.latexmkrc` files: `$ENV{TZ} = "America/Sao_Paulo"` (locked, see L4).
 - Project `.latexmkrc` files: can override TZ (last one wins).
 - `\today` and `\time` respect the TZ environment variable.
 
-### Multi-format output (DOCX, Markdown, HTML)
+### Multi-format output (DOCX, Markdown, HTML, EPUB)
 - LaTeX is the source of truth; other formats are generated via Pandoc + Lua filter.
 - Requires `pandoc >= 3.0` and the Lua filter at `templates/guide/guide-pandoc.lua`.
-- Generate all formats: `make all-formats` (produces MD, DOCX, HTML for pt + en).
-- Individual formats: `make md`, `make docx`, `make html`.
+- Generate all formats: `make all-formats` (produces MD, DOCX, HTML, EPUB for pt + en).
+- Individual formats: `make md`, `make docx`, `make html`, `make epub`.
 - Interactive menu: `make menu` or `./build.sh [project-dir]` — select formats interactively.
 - Non-interactive: `./build.sh --pdf --docx [project-dir]`.
 - The filter translates all custom commands (`\makecover`, `\infobox`, `\objective`,
@@ -266,7 +279,7 @@ at the repo root registers `templates/` as a discovery path.
    description: <when to trigger this skill>
    ---
    ```
-   - The `name` field MUST have the `huawei-template-` prefix (locked, see L7).
+   - The `name` field MUST have the `huawei-template-` prefix (see Conventions).
    - `install.sh` reads this `name` field to determine the install directory.
    - The `description` field determines when the skill triggers. Keep it
      specific to avoid false activations.
@@ -287,7 +300,7 @@ at the repo root registers `templates/` as a discovery path.
 5. **Add to root `README.md`** — add a row to the Templates table.
 
 ### Skill naming rules
-- Prefix: `huawei-template-` (locked, see L7)
+- Prefix: `huawei-template-` (see Conventions)
 - Examples: `huawei-template-guide`, `huawei-template-report`
 - The skill name in frontmatter must match the directory name under `templates/`
   minus the `huawei-template-` prefix.
@@ -301,7 +314,7 @@ at the repo root registers `templates/` as a discovery path.
 2. Use internal prefix `\lg@` for internal macros (e.g. `\lg@docversion`).
 3. Add the command to the reference tables in `SKILL.md` and `README.md`.
 4. Demonstrate the command in both samples (`examples/guide/pt/` and `examples/guide/en/`).
-5. Compile both samples to verify: `latexmk main.tex` from each folder.
+5. Compile both samples to verify: `make samples`.
 6. Commit only if both samples compile without errors.
 
 ### Adding a new environment
