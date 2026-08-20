@@ -50,6 +50,8 @@ to create a new guide document.
 > `pdflatex` won't work — the templates use `fontspec` (system fonts), which
 > requires XeLaTeX. `install.sh` installs and configures XeLaTeX automatically.
 
+## Building documents
+
 ## Compilation
 
 ### Using the Makefile (recommended)
@@ -60,7 +62,7 @@ make en              # compile English sample only
 make setup-guide     # compile setup guide only
 make samples         # compile PT + EN samples
 make examples        # compile setup-guide, copy PDF to repo root
-make                 # all of the above
+make                 # all of the above + all-formats (MD/DOCX/HTML/EPUB)
 make project DIR=examples/my-guide   # compile a specific project (auto-detects .tex)
 make menu            # interactive format selection (PDF/DOCX/MD/HTML/EPUB)
 make clean           # remove all build artifacts
@@ -121,11 +123,7 @@ make epub           # EPUB only (pt + en)
 make clean-formats  # remove generated multi-format files
 ```
 
-The Lua filter (`templates/guide/guide-pandoc.lua`) handles all custom
-commands: `\makecover`, `\infobox`, `\objective`, `\stepbystep`, `\image`,
-`\note`, `\hutable`, `\codefile`, `\badge`, `\menu`, `\changelog`, and more.
-DOCX uses custom styles from `guide-reference.docx`; HTML uses
-`guide-template.html` with Huawei brand CSS.
+The Lua filter (`templates/guide/guide-pandoc.lua`) handles all custom commands (see [`SKILL.md`](templates/guide/SKILL.md) for the full reference). DOCX uses custom styles from `guide-reference.docx`; HTML uses `guide-template.html` with Huawei brand CSS.
 
 Generated outputs are gitignored (build artifacts). Only the filter, reference
 DOCX, HTML template, and Python script are committed.
@@ -150,11 +148,14 @@ and environment reference.
 ```
 .
 ├── AGENTS.md               # project standards and locked decisions
+├── CHANGELOG.md            # version history
 ├── install.sh               # one-command setup (clone + install + verify)
 ├── Makefile                 # build convenience (make samples/examples/clean)
+├── build.sh                # interactive format selection menu
 ├── opencode.json            # skill discovery: scans templates/ for SKILL.md
 ├── README.md                # this file
 ├── LICENSE                  # MIT
+├── .luacheckrc             # Lua static analysis config
 ├── .vscode/
 │   └── settings.json        # VS Code + LaTeX Workshop config (latexmk recipe)
 ├── templates/
@@ -168,8 +169,13 @@ and environment reference.
 ├── documents/               # user-created documents (one subfolder per doc)
 │   └── my-guide/            # example: a new document project
 │       ├── main.tex
-│       ├── .latexmkrc        # TEXINPUTS → ../../templates/guide/
+│       ├── .latexmkrc        # TEXINPUTS → ../../templates/_base/ + ../../templates/guide/
 │       └── assets/           # project-specific images
+├── docs/
+│   └── gallery/        # screenshots of sample output
+├── tests/
+│   ├── cases/          # Lua filter test cases
+│   └── round-trip.sh   # cross-format validation
 └── examples/                 # all example documents and samples
     ├── guide/               # samples for the guide template
     │   ├── pt/               # Portuguese sample
@@ -188,19 +194,12 @@ and environment reference.
 
 ## Adding a new template
 
-1. Create `templates/<name>/` with:
-   - `<name>.cls` — the LaTeX class file
-   - `SKILL.md` — skill definition (YAML frontmatter: `name: huawei-template-<name>`,
-     `description: ...`)
-   - `README.md` — brief template-specific docs
-   - `.latexmkrc` — latexmk config (XeLaTeX)
-   - `common-assets/` — logos, sample images
-2. Add samples in `examples/<name>/pt/` and `examples/<name>/en/`.
-3. Add a row to the Templates table above.
-4. `install.sh` will auto-discover and install the skill on next run.
-
-See [`AGENTS.md`](AGENTS.md) for full project standards and locked decisions.
+See [`AGENTS.md`](AGENTS.md) for the full guide on creating templates and skills.
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## History
+
+See [`CHANGELOG.md`](CHANGELOG.md) for version history.

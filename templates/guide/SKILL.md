@@ -31,8 +31,10 @@ project context:
 3. **`AGENTS.md`** (repo root) — locked decisions (L1–L17), file editing
    rules, versioning workflow, and project standards. These are mandatory
    constraints that must not be violated.
+4. **`templates/guide/README.md`** — human-readable template overview (class
+   options, label translations, format reference, customization).
 
-Read all three files before proceeding to the Quick start below. Do not
+Read all four files before proceeding to the Quick start below. Do not
 guess command names, class options, or formatting conventions — look them
 up in the class file and this SKILL.md.
 
@@ -58,13 +60,8 @@ up in the class file and this SKILL.md.
        $pdf_mode = 5;
        $xelatex = 'xelatex -interaction=nonstopmode %O %S';
        ```
-       - **Timezone:** The cover page shows the compilation date and time
-         automatically (`\today` + `\time`). The template sets a default
-         TZ of `America/Sao_Paulo` (GMT-3). To use a different timezone,
-         override it in the project's `.latexmkrc`:
-         ```perl
-         $ENV{TZ} = "UTC";  # override the template default
-         ```
+          - **Timezone:** default `America/Sao_Paulo` (AGENTS.md L4).
+            Override in `.latexmkrc` if needed (see [README.md](../../README.md)).
      - `assets/` subfolder for project-specific images and code files.
 
 3. **Compile and verify** with `make project DIR=documents/<project-name>`
@@ -82,58 +79,8 @@ up in the class file and this SKILL.md.
   `latexmk` handles this automatically (`.latexmkrc` is included).
 - **fvextra ≥ 1.5** — provides `backgroundcolor` for code blocks. TeX Live
   2024+ includes it; on older installs, update from CTAN or run `install.sh`.
-- **Fonts** are loaded from the OS, not the LaTeX tree:
-  - *HarmonyOS Sans* (body text) — required. Falls back to Liberation Sans
-    (sole fallback) with a warning if missing.
-  - *Cascadia Code* (code) — required. Falls back to DejaVu Sans Mono
-    (sole fallback) with a warning if missing.
-  `install.sh` installs both brand fonts automatically.
-
----
-
-## Project layout (this directory)
-
-```
-templates/guide/
-├── guide.cls          # guide-specific formatting (cover, TOC, titles)
-├── README.md           # human docs (brief — see root README for setup)
-├── SKILL.md            # this file (opencode skill)
-├── .latexmkrc          # latexmk config (XeLaTeX by default)
-└── common-assets/      # shared template assets (logos, sample images)
-    ├── huawei-logo-header.png   # header logo
-    ├── huawei-logo-cover.png    # cover logo
-    ├── exemplo-menu.png         # sample image
-    ├── exemplo-login.png        # sample image
-    └── example-script.sh        # example code file for \codefile
-
-# Each document has its own assets/ folder for project-specific files:
-examples/guide/
-├── pt/
-│   ├── .latexmkrc  # TEXINPUTS → ../../../templates/guide/
-│   ├── main.tex    # Portuguese sample (reference)
-│   └── assets/     # project-specific images and files
-└── en/
-    ├── .latexmkrc
-    ├── main.tex    # English sample (reference)
-    └── assets/     # project-specific images and files
-
-# User-created documents go in documents/ (see Quick start):
-documents/
-└── my-guide/
-    ├── .latexmkrc  # TEXINPUTS → ../../templates/guide/
-    ├── main.tex
-    └── assets/
-```
-
-**Asset resolution:** when a `.tex` file references `assets/foo.png`, LaTeX
-looks in the project's own `assets/` folder first, then falls back to
-`common-assets/` in the template directory (via TEXINPUTS). Logos default to
-`common-assets/` since they are template-level shared assets.
-
-**Rule of thumb:** content/structure goes in `.tex` files; shared look-and-feel
-goes in `templates/_base/huawei-*.sty` modules; guide-specific formatting goes in
-`guide.cls`. Do not inline formatting overrides in the document unless the user
-asks.
+- **Fonts:** HarmonyOS Sans (body) + Cascadia Code (code). Falls back with
+  a warning if missing (see AGENTS.md L8). `install.sh` installs both.
 
 ---
 
@@ -209,6 +156,50 @@ provide full PT-BR coverage; a custom font that drops a diacritic will surface
 here. Run this check after every sample compile — the grep is the only extra step.
 
 ---
+
+## Project layout (this directory)
+
+```
+templates/guide/
+├── guide.cls          # guide-specific formatting (cover, TOC, titles)
+├── README.md           # human docs (brief — see root README for setup)
+├── SKILL.md            # this file (opencode skill)
+├── .latexmkrc          # latexmk config (XeLaTeX by default)
+└── common-assets/      # shared template assets (logos, sample images)
+    ├── huawei-logo-header.png   # header logo
+    ├── huawei-logo-cover.png    # cover logo
+    ├── exemplo-menu.png         # sample image
+    ├── exemplo-login.png        # sample image
+    └── example-script.sh        # example code file for \codefile
+
+# Each document has its own assets/ folder for project-specific files:
+examples/guide/
+├── pt/
+│   ├── .latexmkrc  # TEXINPUTS → ../../../templates/guide/
+│   ├── main.tex    # Portuguese sample (reference)
+│   └── assets/     # project-specific images and files
+└── en/
+    ├── .latexmkrc
+    ├── main.tex    # English sample (reference)
+    └── assets/     # project-specific images and files
+
+# User-created documents go in documents/ (see Quick start):
+documents/
+└── my-guide/
+    ├── .latexmkrc  # TEXINPUTS → ../../../templates/_base/ + ../../../templates/guide/
+    ├── main.tex
+    └── assets/
+```
+
+**Asset resolution:** when a `.tex` file references `assets/foo.png`, LaTeX
+looks in the project's own `assets/` folder first, then falls back to
+`common-assets/` in the template directory (via TEXINPUTS). Logos default to
+`common-assets/` since they are template-level shared assets.
+
+**Rule of thumb:** content/structure goes in `.tex` files; shared look-and-feel
+goes in `templates/_base/huawei-*.sty` modules; guide-specific formatting goes in
+`guide.cls`. Do not inline formatting overrides in the document unless the user
+asks.
 
 ---
 
@@ -472,64 +463,29 @@ rendered, but the content remains in the `.tex` file for future reference.
 ---
 
 ## Format reference
-- Page: A4 · margins top/bottom 3cm, left/right 2cm.
-- Body: HarmonyOS Sans 10.5pt, ~14pt leading, 4pt between paragraphs, no first-line
-  indent, `\frenchspacing`.
-- H1: 20pt bold right-aligned + 56pt number left-aligned + 1.5pt red rule. H2/H3/H4: 18/16/14pt regular.
-- Code: Cascadia Code 10pt on `#F6F8FA`.
-- Links: `#0000FF`, no underline.
+
+See [templates/guide/README.md](README.md) for the format reference table
+(page size, margins, fonts, colors, spacing).
 
 ---
 
 ## Compilation
 
-From the repo root (recommended):
-
 ```bash
-make project DIR=documents/<project-name>   # compile a specific project
-make samples                                 # compile both samples
+make project DIR=documents/<project-name>   # from repo root (recommended)
 ```
 
-Or from inside the project folder:
-
-```bash
-latexmk main.tex             # uses .latexmkrc → xelatex, auto two-pass
-```
+Or `latexmk main.tex` from inside the project folder. See [README.md](../../README.md)
+for the full Makefile reference and multi-format output options.
 
 **Never use pdflatex** — the class loads `fontspec` which requires XeLaTeX.
 
-The project's `.latexmkrc` sets `TEXINPUTS` to the template directory so
-`guide.cls` and `assets/` are found. The existing `examples/guide/pt/` and
-`examples/guide/en/` folders are pre-configured examples.
-
-### Multi-format output (DOCX, Markdown, HTML, EPUB)
-
-LaTeX is the source of truth. DOCX, Markdown, HTML, and EPUB are generated via
-Pandoc + the Lua filter at `templates/guide/guide-pandoc.lua`.
-
-```bash
-# From the repo root:
-make all-formats    # MD + DOCX + HTML + EPUB for both pt and en
-make md             # Markdown only
-make docx           # DOCX only
-make html           # HTML only
-make epub           # EPUB only
-```
-
-Requires `pandoc >= 3.0`. The filter translates all custom commands
-(`\makecover`, `\infobox`, `\objective`, `\stepbystep`, `\image`, `\note`,
-`\hutable`, `\codefile`, `\badge`, `\menu`, `\changelog`, etc.) to Pandoc
-AST elements. Generated outputs are gitignored (build artifacts).
-
 ---
 
-## Customization pointers (when the user asks to change the look)
-- **Logos:** replace files in `common-assets/` keeping the names, or use
-  `\setheaderlogo{path}` / `\setcoverlogo{path}` in the preamble.
-- **Colors:** edit the `\definecolor` block in `templates/_base/huawei-colors.sty`.
-- **Sizes/spacing:** each concern is in a commented section of
-  `guide.cls` (`TITLES`, `CODE`, `HEADER AND FOOTER`, etc.) — find the section,
-  edit there.
+## Customization pointers
+
+See [templates/guide/README.md](README.md) for customization options
+(logos, colors, fonts, sizes/spacing).
 
 ---
 

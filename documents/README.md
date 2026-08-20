@@ -1,7 +1,9 @@
 # Documents
 
 This folder is the default location for new Huawei Cloud documents created
-with the templates in this project.
+with the templates in this project. See the [root README](../README.md) for
+setup and [SKILL.md](../templates/guide/SKILL.md) for the full command
+reference.
 
 ## Creating a new document
 
@@ -29,7 +31,7 @@ Each document is self-contained in its own subfolder:
 documents/
 +-- my-guide/
     +-- main.tex           # the document
-    +-- .latexmkrc         # XeLaTeX + TEXINPUTS → templates/guide/
+    +-- .latexmkrc         # XeLaTeX + TEXINPUTS → templates/_base/ + templates/guide/
     +-- assets/            # project-specific images
 ```
 

@@ -43,29 +43,11 @@ load `babel` with `brazilian` instead.
 
 ## Document structure
 
-The body order is fixed: `\makecover` → `\maketoc` → `\startbody` → sections.
-
-```latex
-\documentclass{guide}          % or [portuguese] for Portuguese
-
-\setguidetitle{Guide: <topic>}
-\setheadertitle{Huawei Cloud -- <short title>}
-\setdocversion{1.0.0}
-
-\begin{document}
-\makecover
-\maketoc
-\startbody
-
-\section{<chapter title>}
-% ... content ...
-
-\end{document}
-```
+The body order is fixed: `\makecover` → `\maketoc` → `\startbody` → sections
+→ `changelog` → `\end{document}`.
 
 See [SKILL.md](SKILL.md) for the complete skeleton and all available commands
-and environments (`\generalobjective`, `\prerequisites`, `\stepbystep`, `code`,
-`\image`, `\menu`, `\badge`, `changelog`, callout boxes, etc.).
+and environments.
 
 ## Format reference
 

@@ -8,9 +8,7 @@ changes.
 
 ## Project overview
 
-A collection of LaTeX templates for Huawei Cloud documents. Each template
-lives under `templates/<name>/` and is self-contained: class file, samples,
-skill, assets, and build config. Documents compile to PDF via XeLaTeX.
+See [README.md](README.md) for project overview, setup, and layout.
 
 ---
 
@@ -18,6 +16,8 @@ skill, assets, and build config. Documents compile to PDF via XeLaTeX.
 
 These decisions were explicitly made and must not be reversed without user
 approval. Changing them breaks existing documents and reproducibility.
+
+> **Note:** L2, L3, L7, L10 were moved to Conventions in v2.0.0 (see [CHANGELOG.md](CHANGELOG.md)). Numbers are retained for traceability.
 
 ### L1. Engine: XeLaTeX only
 - `guide.cls` loads `fontspec`, which requires XeLaTeX or LuaLaTeX.
@@ -122,6 +122,7 @@ approval. Changing them breaks existing documents and reproducibility.
 - Tag format: `v<major>.<minor>.<patch>` — patch for fixes, minor for features,
   major for breaking changes.
 - Push the tag: `git push --tags`.
+- See [CHANGELOG.md](CHANGELOG.md) for the version history.
 - The tag is the release — there are no separate release branches.
 
 ---
@@ -147,76 +148,26 @@ major version bump, not a violation of a locked decision.
 
 ---
 
+## Template features
+
+See `templates/guide/SKILL.md` for the full command and environment reference
+(class options, preamble commands, document structure commands, environments,
+and content commands). SKILL.md is the canonical source; `templates/guide/README.md`
+has the human-readable version with examples.
+
+---
+
 ## Project structure
 
-```
-.
-+-- AGENTS.md               # this file
-+-- install.sh               # one-command setup
-+-- build.sh                 # interactive format selection menu
-+-- Makefile                 # build convenience (make samples/examples/clean)
-+-- opencode.json            # skill discovery (scans templates/)
-+-- README.md                # comprehensive guide for all templates
-+-- LICENSE                  # MIT
-+-- .vscode/settings.json    # latexmk as default recipe
-+-- templates/
-    +-- _base/               # shared formatting modules (huawei-*.sty)
-    │   +-- huawei-colors.sty
-    │   +-- huawei-fonts.sty
-    │   +-- ... (10 modules total)
-    +-- guide/               # the guide template
-        +-- SKILL.md          # opencode skill + agent reference
-        +-- README.md         # human-readable docs
-        +-- guide.cls         # guide-specific formatting (cover, TOC, titles)
-        +-- .latexmkrc        # XeLaTeX, TZ=America/Sao_Paulo
-        +-- guide-pandoc.lua  # Pandoc Lua filter for multi-format output
-        +-- create-reference-docx.py  # generates guide-reference.docx
-        +-- guide-reference.docx      # DOCX custom styles reference
-        +-- guide-template.html       # HTML template with Huawei CSS
-        +-- common-assets/      # logos, sample images, example scripts
-+-- documents/               # user-created documents (one subfolder per doc)
-+-- examples/                 # all example documents and samples
-    +-- guide/               # samples for the guide template
-        +-- pt/               # Portuguese sample
-        │   +-- assets/       # project-specific images
-        +-- en/               # English sample
-        │   +-- assets/       # project-specific images
-    +-- setup-guide/          # ECS + SSH + MaaS gateway setup guide
-        +-- setup-guide.tex
-        +-- .latexmkrc        # TEXINPUTS + TZ override
-        +-- assets/           # project-specific images
-```
+See [README.md "Project layout"](README.md) for the full tree.
 
 ---
 
 ## Compilation
 
-- **Use `make` (recommended)** — wraps latexmk, handles multi-pass, and offers
-  format selection (`make menu`), multi-format output (`make all-formats`), and
-  cleanup (`make clean`).
-- **Never use `pdflatex`** — will fail on `fontspec`.
-- `latexmk` directly works but `make` is preferred for consistency.
-- `.latexmkrc` in each folder sets `$pdf_mode = 5` (xelatex) and `TEXINPUTS`.
-- Clean builds: `make clean` (full clean), `latexmk -c` (aux only).
-
-### Timezone
-- Template `.latexmkrc` files: `$ENV{TZ} = "America/Sao_Paulo"` (locked, see L4).
-- Project `.latexmkrc` files: can override TZ (last one wins).
-- `\today` and `\time` respect the TZ environment variable.
-
-### Multi-format output (DOCX, Markdown, HTML, EPUB)
-- LaTeX is the source of truth; other formats are generated via Pandoc + Lua filter.
-- Requires `pandoc >= 3.0` and the Lua filter at `templates/guide/guide-pandoc.lua`.
-- Generate all formats: `make all-formats` (produces MD, DOCX, HTML, EPUB for pt + en).
-- Individual formats: `make md`, `make docx`, `make html`, `make epub`.
-- Interactive menu: `make menu` or `./build.sh [project-dir]` — select formats interactively.
-- Non-interactive: `./build.sh --pdf --docx [project-dir]`.
-- The filter translates all custom commands (`\makecover`, `\infobox`, `\objective`,
-  `\stepbystep`, `\image`, `\note`, `\hutable`, `\codefile`, `\badge`, `\menu`,
-  `\changelog`, etc.) to Pandoc AST elements.
-- DOCX uses custom styles from `guide-reference.docx`; HTML uses `guide-template.html`.
-- Generated outputs are gitignored; only the filter, reference DOCX, HTML template,
-  and Python script are committed.
+- **Use `make`** (see [README.md](README.md) for full Makefile reference).
+- **Never use `pdflatex`** — will fail on `fontspec` (locked, see L1).
+- Multi-format output: `make all-formats` (see [README.md](README.md) for details).
 
 ---
 
@@ -238,22 +189,8 @@ major version bump, not a violation of a locked decision.
   `\badge`, multi-entry changelog).
 - **Setup guide PDF in root**: `make examples` copies `setup-guide.pdf` to the
   repo root for easy reading. The copy is gitignored (build artifact).
-- **Compiled PDFs are committed**: the sample PDFs
-  (`examples/guide/pt/main.pdf`, `examples/guide/en/main.pdf`) and the
-  setup-guide PDF (`examples/setup-guide/setup-guide.pdf`) are committed to
-  git for validation. Always recompile and commit updated PDFs when the
-  `.tex` or `.cls` files change.
 - **Self-contained**: each sample/example has its own `.latexmkrc` with
   `TEXINPUTS` pointing to `templates/<name>/`. Never share `.latexmkrc` files.
-
----
-
-## Template features
-
-See `templates/guide/SKILL.md` for the full command and environment reference
-(class options, preamble commands, document structure commands, environments,
-and content commands). SKILL.md is the canonical source; `templates/guide/README.md`
-has the human-readable version with examples.
 
 ---
 

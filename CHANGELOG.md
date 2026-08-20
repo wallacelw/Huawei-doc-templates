@@ -3,6 +3,18 @@
 All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
+## v2.0.1 (2026-08-20)
+
+### Documentation review + L17 standard
+
+- Added L17 to AGENTS.md: version tag + validate/tests after each change.
+- Made Makefile the recommended compilation method across all docs.
+- Added EPUB to all multi-format output documentation.
+- Fixed stale references: guide.cls description (decomposed, not all-in-one),
+  broken L7 refs (moved to Conventions), L1–L15 → L1–L17 range.
+- Fixed hardcoded absolute path in `tests/cases/codefile.tex`.
+- Renamed project folder to lowercase (`huawei-doc-templates`).
+
 ## v2.0.0 (2026-08-19)
 
 ### Major: Class decomposition + multi-format output
