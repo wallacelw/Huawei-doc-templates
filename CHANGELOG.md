@@ -3,6 +3,18 @@
 All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
+## v2.2.0 (2026-08-20)
+
+### Self-documenting Makefile
+
+- Bare `make` now prints a clear, sectioned help summary instead of
+  building everything (use `make all` to build everything). The Makefile
+  is self-documenting via `## ` target annotations and `##@ ` section
+  headers; `make help` shows the same output.
+- Help is TTY-aware (colored in a terminal, plain when piped).
+- Updated README Makefile reference to reflect the new default.
+- Recompiled setup-guide.pdf (cls changed in v2.1.0).
+
 ## v2.1.0 (2026-08-20)
 
 ### Codebase + documentation review fixes
