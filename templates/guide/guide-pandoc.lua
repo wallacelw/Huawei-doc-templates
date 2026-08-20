@@ -548,13 +548,17 @@ local function handle_hutable_env(text)
     if row_str ~= "" then table.insert(rows, split_row(row_str, num_cols)) end
   end
   -- Handle last row without trailing \\
-  local after_last_sep = cleaned:match("\\\\%s*(.*)$")
-  if after_last_sep then
-    after_last_sep = trim(after_last_sep)
-    if after_last_sep ~= "" then table.insert(rows, split_row(after_last_sep, num_cols)) end
-  elseif #rows == 0 and cleaned ~= "" then
-    local row_str = trim(cleaned)
-    if row_str ~= "" then table.insert(rows, split_row(row_str, num_cols)) end
+  -- gmatch above captured every row ending with \\. If the body ends with \\,
+  -- all rows are captured. Only when the final row lacks a trailing \\ do we
+  -- extract the content after the LAST \\ (greedy .* finds the last \\).
+  local trimmed_body = trim(cleaned)
+  if trimmed_body ~= "" and not trimmed_body:find("\\\\%s*$") then
+    local after_last_sep = trimmed_body:match(".*\\\\%s*(.-)%s*$")
+    if after_last_sep and after_last_sep ~= "" then
+      table.insert(rows, split_row(after_last_sep, num_cols))
+    elseif #rows == 0 then
+      table.insert(rows, split_row(trimmed_body, num_cols))
+    end
   end
 
   if #rows == 0 then return pandoc.Para({pandoc.Str("[Empty table]")}) end
