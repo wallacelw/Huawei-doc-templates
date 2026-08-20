@@ -132,12 +132,12 @@ def main():
     # ── Source Code ──────────────────────────────────────────────────
     style = add_or_get_paragraph_style(doc, "Source Code")
     set_cell_shading(style, "F6F8FA")
-    set_run_font(style, "Consolas", 10, color_hex="1F2328")
+    set_run_font(style, "Cascadia Code", 10, color_hex="1F2328")
 
     # ── Badge (character style) ──────────────────────────────────────
     style = add_or_get_character_style(doc, "badge")
     set_character_shading(style, "C7000B")
-    set_run_font(style, "Consolas", 9, color_hex="FFFFFF", bold=True)
+    set_run_font(style, "Cascadia Code", 9, color_hex="FFFFFF", bold=True)
 
     # ── Heading 1 — Huawei red ───────────────────────────────────────
     try:
