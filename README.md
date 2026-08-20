@@ -164,15 +164,22 @@ and environment reference.
 │       ├── SKILL.md          # opencode skill + agent command reference
 │       ├── README.md         # template-specific details (brief)
 │       ├── guide.cls         # guide-specific formatting (cover, TOC, titles)
+│       ├── guide-pandoc.lua  # Pandoc Lua filter (DOCX/MD/HTML/EPUB output)
+│       ├── guide-reference.docx  # custom DOCX styles for Pandoc
+│       ├── guide-template.html   # HTML5 template with Huawei brand CSS
+│       ├── create-reference-docx.py  # regenerate guide-reference.docx
 │       ├── .latexmkrc        # latexmk config (XeLaTeX, TZ=America/Sao_Paulo)
 │       └── common-assets/      # logos, sample images, example scripts
 ├── documents/               # user-created documents (one subfolder per doc)
+│   ├── README.md            # folder description and structure
 │   └── my-guide/            # example: a new document project
 │       ├── main.tex
 │       ├── .latexmkrc        # TEXINPUTS → ../../templates/_base/ + ../../templates/guide/
 │       └── assets/           # project-specific images
 ├── tests/
 │   ├── cases/          # Lua filter test cases
+│   ├── expected/       # expected filter output (.md.expected)
+│   ├── test-filter.sh  # Lua filter unit tests
 │   └── round-trip.sh   # cross-format validation
 └── examples/                 # all examples, samples, and output screenshots
     ├── gallery/             # screenshots of sample output
