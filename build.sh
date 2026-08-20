@@ -85,8 +85,9 @@ if [ -z "$PROJECT_DIR" ]; then
 fi
 
 # Resolve to absolute path
+orig_dir="$PROJECT_DIR"
 PROJECT_DIR="$(realpath "$PROJECT_DIR" 2>/dev/null)" || {
-    echo "Error: Project directory does not exist: $1" >&2
+    echo "Error: Project directory does not exist: $orig_dir" >&2
     exit 1
 }
 
