@@ -4,7 +4,7 @@ A collection of LaTeX templates for Huawei Cloud documents. Each template
 lives under `templates/<name>/` and is self-contained: class file, samples,
 skill, assets, and build config. Documents compile to PDF via XeLaTeX.
 
-**See what the output looks like:** [`docs/gallery/`](docs/gallery/) —
+**See what the output looks like:** [`examples/gallery/`](examples/gallery/) —
 screenshots of the cover page, content pages, code blocks, tables, callouts,
 and changelog.
 
@@ -171,12 +171,11 @@ and environment reference.
 │       ├── main.tex
 │       ├── .latexmkrc        # TEXINPUTS → ../../templates/_base/ + ../../templates/guide/
 │       └── assets/           # project-specific images
-├── docs/
-│   └── gallery/        # screenshots of sample output
 ├── tests/
 │   ├── cases/          # Lua filter test cases
 │   └── round-trip.sh   # cross-format validation
-└── examples/                 # all example documents and samples
+└── examples/                 # all examples, samples, and output screenshots
+    ├── gallery/             # screenshots of sample output
     ├── guide/               # samples for the guide template
     │   ├── pt/               # Portuguese sample
     │   │   ├── .latexmkrc    # TEXINPUTS → templates/guide/

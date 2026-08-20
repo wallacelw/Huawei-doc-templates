@@ -3,6 +3,16 @@
 All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
+## v2.0.3 (2026-08-20)
+
+### Repo structure: gallery moved into examples/
+
+- Moved `docs/gallery/` → `examples/gallery/` and removed the now-empty
+  `docs/` directory, eliminating the confusing `docs/` vs `documents/`
+  name clash.
+- Updated README.md gallery link and project layout tree.
+- No code, class, or `.tex` changes; compilation unaffected.
+
 ## v2.0.1 (2026-08-20)
 
 ### Documentation review + L17 standard
