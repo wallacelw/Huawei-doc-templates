@@ -3,6 +3,29 @@
 All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
+## v2.1.0 (2026-08-20)
+
+### Codebase + documentation review fixes
+
+- **Fix hutable phantom-row bug** in the Pandoc Lua filter: the final-row
+  fallback anchored to the first `\\` instead of the last, emitting a
+  duplicate mangled row in every non-PDF table output. Corrected the
+  expected test output that had encoded the bug.
+- **Align font fallback with L8**: removed extra fallbacks (Helvetica Neue,
+  Arial, Consolas) from the HTML template and switched the DOCX reference
+  from Consolas to Cascadia Code. Regenerated guide-reference.docx.
+- **Version hygiene**: bumped guide.cls to v2.0.3; completed .sty
+  dependency comments (keyval, etoolbox, tcolorbox, xcolor/colortbl).
+- **Complete README project-layout tree**: added 7 missing entries
+  (guide-pandoc.lua, guide-reference.docx, guide-template.html,
+  create-reference-docx.py, documents/README.md, tests/test-filter.sh,
+  tests/expected/).
+- **Fix build.sh** error message that referenced an empty `$1`.
+- **Add 9 Lua filter test cases** for previously untested commands
+  (imagecap, imageplaceholder, objectives env, generalobjective,
+  prerequisites, param, code env, codefile without language hint,
+  multi-entry changelog). Suite now 23 passed, 0 failed.
+
 ## v2.0.3 (2026-08-20)
 
 ### Repo structure: gallery moved into examples/
@@ -12,6 +35,14 @@ Per-document changelogs are maintained via `\changelogentry` in each `.tex` file
   name clash.
 - Updated README.md gallery link and project layout tree.
 - No code, class, or `.tex` changes; compilation unaffected.
+
+## v2.0.2 (2026-08-20)
+
+### Documentation refactor
+
+- Refactored docs: removed duplication, fixed cross-references, and
+  corrected TEXINPUTS paths. (Backfilled — tag existed without a
+  CHANGELOG entry.)
 
 ## v2.0.1 (2026-08-20)
 
