@@ -57,17 +57,24 @@ to create a new guide document.
 ### Using the Makefile (recommended)
 
 ```bash
+make                 # show help (list all available targets)
+make all             # compile everything: samples + setup-guide + all formats
+make samples         # compile PT + EN samples
+make examples        # compile setup-guide, copy PDF to repo root
 make pt              # compile Portuguese sample only
 make en              # compile English sample only
 make setup-guide     # compile setup guide only
-make samples         # compile PT + EN samples
-make examples        # compile setup-guide, copy PDF to repo root
-make                 # all of the above + all-formats (MD/DOCX/HTML/EPUB)
 make project DIR=examples/my-guide   # compile a specific project (auto-detects .tex)
 make menu            # interactive format selection (PDF/DOCX/MD/HTML/EPUB)
+make all-formats     # generate DOCX + MD + HTML + EPUB for both samples
 make clean           # remove all build artifacts
-make clean-pt        # clean specific project
+make clean-formats   # remove generated multi-format files
 ```
+
+Bare `make` prints a self-documenting help summary (the Makefile is
+self-documenting via `## ` annotations on each target). `make --help` is
+reserved by GNU make and prints make's own usage; use `make` or `make help`
+for the project target list.
 
 ### Using latexmk directly
 
