@@ -101,6 +101,17 @@ echo ""
 
 # ── Confirmation ──
 if [[ "$AUTO_YES" != true ]]; then
+    echo ""
+    echo "This script will:"
+    echo "  1. Install apt packages: texlive-xetex, texlive-latex-extra, texlive-lang-portuguese, latexmk, fonts-liberation, fonts-cascadia-code, poppler-utils, pandoc, python3-docx"
+    echo "  2. Update fvextra from CTAN if version < 1.5 (backgroundcolor support)"
+    echo "  3. Download and install HarmonyOS Sans font (.deb from GitHub releases)"
+    echo "  4. Update font cache (fc-cache)"
+    echo "  5. Copy .sty modules to system TeX directory (requires sudo)"
+    echo "  6. Fix system-wide latexmk default to xelatex (/etc/LatexMk)"
+    echo "  7. Configure VS Code settings (LaTeX Workshop, local + remote)"
+    echo "  8. Compile sample documents to verify installation"
+    echo ""
     echo -e "  ${C_BOLD}Proceed with installation?${C_RESET} [y/N] "
     read -r response
     if [[ ! "$response" =~ ^[Yy]$ ]]; then

@@ -4,6 +4,10 @@ A collection of LaTeX templates for Huawei Cloud documents. Each template
 lives under `templates/<name>/` and is self-contained: class file, samples,
 skill, assets, and build config. Documents compile to PDF via XeLaTeX.
 
+**See what the output looks like:** [`docs/gallery/`](docs/gallery/) —
+screenshots of the cover page, content pages, code blocks, tables, callouts,
+and changelog.
+
 ## Quick start
 
 **One-liner (clone + install):**

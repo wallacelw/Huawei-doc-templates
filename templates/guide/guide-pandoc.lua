@@ -11,6 +11,13 @@
 --- Most features work with pandoc >= 2.9; hutable requires >= 3.0.
 --- Do NOT add a return table at the end — global functions work.
 
+-- Require pandoc >= 3.0
+if PANDOC_VERSION then
+  PANDOC_VERSION:must_be_at_least('3.0')
+end
+-- Ensure C locale for consistent pattern matching
+os.setlocale('C')
+
 -- Language labels (English / Portuguese)
 local labels = {
   en = {
@@ -30,6 +37,10 @@ local labels = {
 -- Active language: "en" or "pt" (set by documentclass option detection)
 local lang = "en"
 local function L(key) return labels[lang][key] or key end
+
+local function log_warn(msg)
+  io.stderr:write("WARNING: " .. msg .. "\n")
+end
 
 -- =====================================================================
 --  Utility helpers
@@ -200,6 +211,13 @@ local function parse_latex_inlines(content)
   return pandoc.Inlines({pandoc.Str(content)})
 end
 
+--- ARIA role and label mapping for callout types (accessibility).
+local aria_roles = {
+  warning = { role = "alert",  ["aria-label"] = "Warning" },
+  tip     = { role = "note",   ["aria-label"] = "Tip" },
+  infobox = { role = "note",   ["aria-label"] = "Info" },
+}
+
 --- Create a format-appropriate callout box.
 local function make_callout(cls, label, content)
   local label_para = pandoc.Para({pandoc.Strong({pandoc.Str(label)}), pandoc.Str(" ")})
@@ -229,10 +247,16 @@ local function make_callout(cls, label, content)
     return pandoc.BlockQuote(quote_blocks)
 
   else
-    -- HTML5 (and fallback): Div with callout class
+    -- HTML5 (and fallback): Div with callout class and ARIA attributes
     local div_content = pandoc.Blocks({label_para})
     div_content:extend(content)
-    return pandoc.Div(div_content, pandoc.Attr("", {"callout", cls}, {}))
+    local attrs = pandoc.Attr("", {"callout", cls}, {})
+    local aria = aria_roles[cls]
+    if aria then
+      attrs.attributes.role = aria.role
+      attrs.attributes["aria-label"] = aria["aria-label"]
+    end
+    return pandoc.Div(div_content, attrs)
   end
 end
 
@@ -240,13 +264,13 @@ end
 --- Returns (caption_inlines, path, is_placeholder, desc_raw) or nil.
 --- is_placeholder is true only for \imageplaceholder; the RawInline handler
 --- uses desc_raw for the placeholder text instead of creating an Image.
+--- For \image without caption: empty alt text (decorative image per WCAG).
 local function parse_image(text)
   -- Try \image[opts]{file}
   local file = text:match("\\image%s*%b[]%s*(%b{})") or text:match("\\image%s*(%b{})")
   if file then
     local path = file:sub(2, -2)
-    local basename = path:match("([^/]+)$") or path
-    return pandoc.Inlines({pandoc.Str(basename)}), path, false, nil
+    return pandoc.Inlines({}), path, false, nil
   end
 
   -- Try \imagecap[opts]{file}{caption}
@@ -326,6 +350,8 @@ function Pandoc(doc)
     local src = read_file(source_path)
     if src then
       if src:find("\\documentclass%s*%[.*portuguese.*%]%s*{guide}") then lang = "pt" end
+      -- Set doc.meta.lang so the HTML template's $lang$ variable works
+      doc.meta.lang = (lang == "pt") and "pt" or "en"
       local title = find_cmd_arg(src, "setguidetitle")
       if title then
         local current_title = doc.meta.title
@@ -641,10 +667,16 @@ function RawBlock(raw)
     return pandoc.Para({pandoc.Strong({pandoc.Str(L("stepbystep"))})})
   end
 
-  -- \image, \imagecap, \imageplaceholder  →  Image (block-level)
+  -- \image, \imagecap  →  Image (block-level)
+  -- \imageplaceholder  →  placeholder para for DOCX/HTML, Image for Markdown
   do
-    local caption, path = parse_image(text)
-    if caption and path then return pandoc.Para({pandoc.Image(caption, path)}) end
+    local caption, path, is_placeholder, desc = parse_image(text)
+    if caption and path then
+      if is_placeholder and (FORMAT:match("docx") or FORMAT:match("html")) then
+        return pandoc.Para({pandoc.Emph({pandoc.Str("[Image placeholder: " .. desc .. "]")})})
+      end
+      return pandoc.Para({pandoc.Image(caption, path)})
+    end
   end
 
   -- \note{...}  →  callout with "Note:" label (block-level)
@@ -673,7 +705,8 @@ function RawBlock(raw)
       local classes = (lang_hint and lang_hint ~= "") and {lang_hint} or {}
       return pandoc.CodeBlock(content, pandoc.Attr("", classes, {}))
     elseif err_path then
-      return pandoc.Para({pandoc.Emph({pandoc.Str("[Code file not found: " .. err_path .. "]")})})
+      log_warn("Code file not found: " .. err_path)
+      return pandoc.Para({})
     end
   end
 
@@ -782,7 +815,8 @@ function RawInline(raw)
       if lang_hint and lang_hint ~= "" then table.insert(classes, lang_hint) end
       return pandoc.Code(content, pandoc.Attr("", classes, {}))
     elseif err_path then
-      return pandoc.Emph({pandoc.Str("[Code file not found: " .. err_path .. "]")})
+      log_warn("Code file not found: " .. err_path)
+      return pandoc.Inlines({})
     end
   end
 

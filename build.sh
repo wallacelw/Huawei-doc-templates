@@ -36,6 +36,8 @@ FLAG_PDF=false
 FLAG_DOCX=false
 FLAG_MD=false
 FLAG_HTML=false
+FLAG_EPUB=false
+DRY_RUN=0
 PROJECT_DIR=""
 
 # ── Parse arguments ──────────────────────────────────────────────────────
@@ -45,7 +47,9 @@ while [[ $# -gt 0 ]]; do
         --docx)    FLAG_DOCX=true; shift ;;
         --md)      FLAG_MD=true;   shift ;;
         --html)    FLAG_HTML=true; shift ;;
-        --all)     FLAG_PDF=true; FLAG_DOCX=true; FLAG_MD=true; FLAG_HTML=true; shift ;;
+        --epub)    FLAG_EPUB=true; shift ;;
+        --dry-run) DRY_RUN=1; shift ;;
+        --all)     FLAG_PDF=true; FLAG_DOCX=true; FLAG_MD=true; FLAG_HTML=true; FLAG_EPUB=true; shift ;;
         -h|--help)
             echo "Usage: ./build.sh [OPTIONS] [PROJECT-DIR]"
             echo ""
@@ -54,7 +58,9 @@ while [[ $# -gt 0 ]]; do
             echo "  --docx      Generate DOCX only"
             echo "  --md        Generate Markdown only"
             echo "  --html      Generate HTML only"
+            echo "  --epub      Generate EPUB only"
             echo "  --all       Generate all formats"
+            echo "  --dry-run   Show what would be built without building"
             echo "  -h, --help  Show this help message"
             echo ""
             echo "Examples:"
@@ -134,7 +140,7 @@ check_deps() {
         echo "  Install: sudo apt install texlive-xetex  (or equivalent for your OS)" >&2
         missing=true
     fi
-    if [ "$FLAG_DOCX" = true ] || [ "$FLAG_MD" = true ] || [ "$FLAG_HTML" = true ]; then
+    if [ "$FLAG_DOCX" = true ] || [ "$FLAG_MD" = true ] || [ "$FLAG_HTML" = true ] || [ "$FLAG_EPUB" = true ]; then
         if ! command -v pandoc &>/dev/null; then
             echo "Error: pandoc is not installed." >&2
             echo "  Install: sudo apt install pandoc  (or https://pandoc.org/installing.html)" >&2
@@ -161,7 +167,8 @@ interactive_menu() {
     echo "  2) DOCX     (via Pandoc)"
     echo "  3) Markdown (via Pandoc)"
     echo "  4) HTML     (via Pandoc)"
-    echo "  5) All formats"
+    echo "  5) EPUB     (via Pandoc)"
+    echo "  6) All formats"
     echo ""
 
     while true; do
@@ -182,6 +189,7 @@ interactive_menu() {
             FLAG_DOCX=true
             FLAG_MD=true
             FLAG_HTML=true
+            FLAG_EPUB=true
             break
         fi
 
@@ -193,14 +201,16 @@ interactive_menu() {
                 2) FLAG_DOCX=true ;;
                 3) FLAG_MD=true   ;;
                 4) FLAG_HTML=true ;;
-                5)
+                5) FLAG_EPUB=true ;;
+                6)
                     FLAG_PDF=true
                     FLAG_DOCX=true
                     FLAG_MD=true
                     FLAG_HTML=true
+                    FLAG_EPUB=true
                     ;;
                 *)
-                    echo "Invalid selection: '$token'. Enter numbers 1-5 or 'all'."
+                    echo "Invalid selection: '$token'. Enter numbers 1-6 or 'all'."
                     valid=false
                     break
                     ;;
@@ -210,7 +220,7 @@ interactive_menu() {
         if [ "$valid" = true ]; then
             # Ensure at least one format selected
             if [ "$FLAG_PDF" = false ] && [ "$FLAG_DOCX" = false ] && \
-               [ "$FLAG_MD" = false ] && [ "$FLAG_HTML" = false ]; then
+               [ "$FLAG_MD" = false ] && [ "$FLAG_HTML" = false ] && [ "$FLAG_EPUB" = false ]; then
                 echo "No format selected. Please try again."
                 continue
             fi
@@ -225,21 +235,34 @@ declare -a RESULTS_OK=()
 declare -a RESULTS_FAIL=()
 
 generate_pdf() {
+    local out="${BASENAME}.pdf"
+    if [ "$DRY_RUN" -eq 1 ]; then
+        echo "  Would generate PDF: ${REL_DIR}/$out"
+        RESULTS_OK+=("PDF:$out (dry-run)")
+        return
+    fi
     echo "  Generating PDF..."
-    local output="${PROJECT_DIR}/${BASENAME}.pdf"
-    if (cd "$PROJECT_DIR" && latexmk "$TEX_FILE") 2>&1; then
-        # Count pages
-        local pages=""
-        if command -v pdfinfo &>/dev/null && [ -f "$output" ]; then
-            pages="$(pdfinfo "$output" 2>/dev/null | grep '^Pages:' | awk '{print $2}')"
-        fi
-        if [ -n "$pages" ]; then
-            RESULTS_OK+=("PDF:${REL_DIR}/${BASENAME}.pdf (${pages} pages)")
-        else
-            RESULTS_OK+=("PDF:${REL_DIR}/${BASENAME}.pdf")
+    local rc=0
+    (cd "$PROJECT_DIR" && latexmk "$TEX_FILE") 2>&1 || rc=$?
+    if [ "$rc" -eq 0 ]; then
+        RESULTS_OK+=("PDF:$out")
+        # Check for font fallback warnings
+        local logfile="${PROJECT_DIR}/${BASENAME}.log"
+        if [ -f "$logfile" ]; then
+            if grep -q "PackageWarning.*Font.*not found" "$logfile" 2>/dev/null || \
+               grep -q "falling back to" "$logfile" 2>/dev/null; then
+                echo "  ⚠ Warning: PDF built with fallback fonts (brand fonts not found)"
+            fi
         fi
     else
         RESULTS_FAIL+=("PDF:latexmk failed")
+        # Show last 20 lines of log on failure
+        local logfile="${PROJECT_DIR}/${BASENAME}.log"
+        if [ -f "$logfile" ]; then
+            echo "  ┌─ Last 20 lines of ${BASENAME}.log:"
+            tail -20 "$logfile" | sed 's/^/  │ /'
+            echo "  └─"
+        fi
     fi
 }
 
@@ -247,30 +270,40 @@ generate_pandoc_format() {
     local label=$1 fmt=$2 ext=$3; shift 3
     local extra_args=("$@")
     local out="${BASENAME}.${ext}"
+    if [ "$DRY_RUN" -eq 1 ]; then
+        echo "  Would generate ${label}: ${REL_DIR}/$out"
+        RESULTS_OK+=("${label}:$out (dry-run)")
+        return
+    fi
     echo "  Generating ${label}..."
-    (cd "$PROJECT_DIR" && pandoc -f latex+raw_tex \
+    local err
+    err=$(cd "$PROJECT_DIR" && pandoc -f latex+raw_tex \
         --lua-filter="$LUA_FILTER" \
         "${extra_args[@]}" \
-        -t "$fmt" "$TEX_FILE" -o "$out") 2>&1
-    if [ $? -eq 0 ]; then
-        local size=""
-        local output="${PROJECT_DIR}/${BASENAME}.${ext}"
-        if [ -f "$output" ]; then
-            size="$(du -k "$output" 2>/dev/null | cut -f1)"
-        fi
-        if [ -n "$size" ]; then
-            RESULTS_OK+=("${label}:${REL_DIR}/${BASENAME}.${ext} (${size} KB)")
-        else
-            RESULTS_OK+=("${label}:${REL_DIR}/${BASENAME}.${ext}")
-        fi
+        -t "$fmt" "$TEX_FILE" -o "$out" 2>&1) || {
+        RESULTS_FAIL+=("$label:pandoc failed")
+        echo "  ┌─ pandoc error output:"
+        echo "$err" | tail -20 | sed 's/^/  │ /'
+        echo "  └─"
+        return
+    }
+    echo "$err"
+    local size=""
+    local output="${PROJECT_DIR}/${BASENAME}.${ext}"
+    if [ -f "$output" ]; then
+        size="$(du -k "$output" 2>/dev/null | cut -f1)"
+    fi
+    if [ -n "$size" ]; then
+        RESULTS_OK+=("${label}:${REL_DIR}/${BASENAME}.${ext} (${size} KB)")
     else
-        RESULTS_FAIL+=("${label}:pandoc failed")
+        RESULTS_OK+=("${label}:${REL_DIR}/${BASENAME}.${ext}")
     fi
 }
 
 generate_docx() { generate_pandoc_format "DOCX" docx docx --reference-doc="$REF_DOCX"; }
 generate_md()   { generate_pandoc_format "Markdown" markdown md; }
 generate_html() { generate_pandoc_format "HTML" html5 html --template="$HTML_TMPL" -s; }
+generate_epub() { generate_pandoc_format "EPUB" epub epub; }
 
 # ── Summary ──────────────────────────────────────────────────────────────
 show_summary() {
@@ -285,6 +318,7 @@ show_summary() {
             DOCX)     echo "DOCX:    " ;;
             Markdown) echo "Markdown:" ;;
             HTML)     echo "HTML:    " ;;
+            EPUB)     echo "EPUB:    " ;;
             *)        echo "${1}: " ;;
         esac
     }
@@ -308,18 +342,19 @@ show_summary() {
 
 # If no format flags set, go interactive
 if [ "$FLAG_PDF" = false ] && [ "$FLAG_DOCX" = false ] && \
-   [ "$FLAG_MD" = false ] && [ "$FLAG_HTML" = false ]; then
+   [ "$FLAG_MD" = false ] && [ "$FLAG_HTML" = false ] && [ "$FLAG_EPUB" = false ]; then
     interactive_menu
 fi
 
 # Check dependencies for selected formats
 check_deps
 
-# Generate selected formats
+# Generate selected formats (Pandoc formats run sequentially — ~0.7s total, parallelization not worth the complexity)
 if [ "$FLAG_PDF"   = true ]; then generate_pdf;   fi
 if [ "$FLAG_DOCX"  = true ]; then generate_docx;  fi
 if [ "$FLAG_MD"    = true ]; then generate_md;    fi
 if [ "$FLAG_HTML"  = true ]; then generate_html;  fi
+if [ "$FLAG_EPUB"  = true ]; then generate_epub;  fi
 
 # Show summary
 show_summary

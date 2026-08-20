@@ -12,7 +12,7 @@
 #   make clean-project DIR=examples/my-guide — clean a specific project
 
 .PHONY: all samples examples pt en setup-guide project menu
-.PHONY: docx docx-pt docx-en md md-pt md-en html html-pt html-en all-formats
+.PHONY: docx docx-pt docx-en md md-pt md-en html html-pt html-en epub epub-pt epub-en all-formats
 .PHONY: clean clean-samples clean-examples clean-pt clean-en clean-setup-guide clean-project clean-formats
 
 PT_DIR   = examples/guide/pt
@@ -62,11 +62,14 @@ docx-pt:   ; ./build.sh --docx examples/guide/pt
 docx-en:   ; ./build.sh --docx examples/guide/en
 html-pt:   ; ./build.sh --html examples/guide/pt
 html-en:   ; ./build.sh --html examples/guide/en
+epub-pt:   ; ./build.sh --epub examples/guide/pt
+epub-en:   ; ./build.sh --epub examples/guide/en
 
 md:   md-pt md-en
 docx: docx-pt docx-en
 html: html-pt html-en
-all-formats: docx md html
+epub: epub-pt epub-en
+all-formats: docx md html epub
 
 # ── Clean targets ──
 clean: clean-samples clean-examples clean-formats
@@ -96,5 +99,5 @@ clean-project:
 	fi
 
 clean-formats:
-	rm -f examples/guide/pt/main.docx examples/guide/pt/main.md examples/guide/pt/main.html
-	rm -f examples/guide/en/main.docx examples/guide/en/main.md examples/guide/en/main.html
+	rm -f examples/guide/pt/main.docx examples/guide/pt/main.md examples/guide/pt/main.html examples/guide/pt/main.epub
+	rm -f examples/guide/en/main.docx examples/guide/en/main.md examples/guide/en/main.html examples/guide/en/main.epub

@@ -5,6 +5,7 @@
 %%  Extracted from guide.cls v2.0.0 decomposition.
 %% =====================================================================
 \ProvidesPackage{huawei-page}[2026/08/19 Huawei page layout]
+%% Depends on: huawei-colors (linkblue), huawei-lang (\lg@pagelabel)
 
 % =====================================================================
 %  CAPTION SETUP
@@ -30,6 +31,11 @@
   linktoc=all,
   bookmarksnumbered=true,
 }
+% Set PDF metadata after preamble (title is set by \setguidetitle)
+\AtBeginDocument{\hypersetup{pdftitle={\lg@guidetitle}, pdfauthor={Huawei Technologies}}}
+% TODO: PDF/UA tagging would require \usepackage{tagpdf} and
+% \tagpdfsetup{activate-all, interwordspace=true} in guide.cls.
+% This is a larger effort that may require XeLaTeX-specific configuration.
 
 % =====================================================================
 %  HEADER AND FOOTER

@@ -32,3 +32,8 @@ documents/
 The `documents/` folder is gitignored by default (only `documents/README.md`
 is tracked). To force-track a document in version control, use
 `git add -f <path>`.
+
+**⚠ Data loss risk:** Documents in this folder are local-only. If your machine
+is lost or reinstalled, these documents will be gone. To protect important work:
+- Push to a private Git remote: `git remote add private <url> && git push -f private`
+- Or force-track: `git add -f documents/my-guide/`

@@ -24,14 +24,6 @@ approval. Changing them breaks existing documents and reproducibility.
 - `pdflatex` will **not** work. Never remove `fontspec` or switch to pdflatex.
 - `.latexmkrc` sets `$pdf_mode = 5` (xelatex). Do not change this.
 
-### L2. Class name: `guide` (not `labguide`)
-- The class was renamed from `labguide` to `guide`. The old name is gone.
-- `\documentclass{guide}` or `\documentclass[portuguese]{guide}`.
-
-### L3. Callout box names: `warning`, `tip`, `infobox`
-- `aviso` was renamed to `warning`, `dica` to `tip`, `info` to `infobox`.
-- Never reintroduce `aviso`, `dica`, or `info` environments.
-
 ### L4. Template default timezone is America/Sao_Paulo (GMT-3)
 - The template's `.latexmkrc` files set `$ENV{TZ} = "America/Sao_Paulo"`.
 - Projects can override TZ in their own `.latexmkrc` (last one wins).
@@ -52,11 +44,6 @@ approval. Changing them breaks existing documents and reproducibility.
 - Never scatter `.tex` files directly in the workspace root.
 - The `.latexmkrc` sets `TEXINPUTS` pointing to `templates/guide/`.
 
-### L7. Skill prefix: `huawei-template-`
-- All skills are named `huawei-template-<name>` (e.g. `huawei-template-guide`).
-- The prefix is set in the SKILL.md frontmatter `name` field.
-- `install.sh` extracts the name from frontmatter, not from the directory.
-
 ### L8. Font fallback chain
 - Main font: HarmonyOS Sans -> Liberation Sans (sole fallback).
 - Mono font: Cascadia Code -> DejaVu Sans Mono (sole fallback).
@@ -70,11 +57,6 @@ approval. Changing them breaks existing documents and reproducibility.
   `linkblue` (`#0000FF`), `ruleblack` (`#000000`).
 - Callout colors: `warningbg/fg` (amber), `tipbg/fg` (green), `infobg/fg` (blue).
 - Do not change these values. They match the Huawei house style.
-
-### L10. Body order is fixed
-- `\makecover` -> `\maketoc` -> `\startbody` -> sections -> `changelog` -> `\end{document}`.
-- `\startbody` resets page numbering to 1.
-- Do not reorder or skip these commands.
 
 ### L11. Auto-version on every AI-assisted change
 - Every AI-assisted edit to a document must bump `\setdocversion` and add a
@@ -130,6 +112,27 @@ approval. Changing them breaks existing documents and reproducibility.
 - `make all-formats` generates all 6 outputs (MD + DOCX + HTML for pt + en).
 - Generated outputs are gitignored (build artifacts). Only the filter, reference
   DOCX, HTML template, and Python script are committed.
+
+---
+
+## Conventions
+
+These are stable naming and structural conventions. Changing them would be a
+major version bump, not a violation of a locked decision.
+
+### Class name: `guide`
+- `\documentclass{guide}` or `\documentclass[portuguese]{guide}`.
+
+### Callout box names: `warning`, `tip`, `infobox`
+- Never reintroduce `aviso`, `dica`, or `info` environments.
+
+### Skill prefix: `huawei-template-`
+- All skills are named `huawei-template-<name>` (e.g. `huawei-template-guide`).
+- The prefix is set in the SKILL.md frontmatter `name` field.
+
+### Body order
+- `\makecover` -> `\maketoc` -> `\startbody` -> sections -> `changelog` -> `\end{document}`.
+- `\startbody` resets page numbering to 1.
 
 ---
 
