@@ -40,7 +40,9 @@ approval. Changing them breaks existing documents and reproducibility.
   time (when shown).
 
 ### L6. Self-contained project folders
-- Every document lives in its own folder with its own `.latexmkrc`.
+- Every document lives in its own folder. Source files (`.tex` and
+  `.latexmkrc`) go in a `src/` subfolder; generated outputs (PDF, DOCX,
+  MD, HTML) go in the document root.
 - Never scatter `.tex` files directly in the workspace root.
 - The `.latexmkrc` sets `TEXINPUTS` pointing to `templates/guide/`.
 
@@ -78,8 +80,11 @@ approval. Changing them breaks existing documents and reproducibility.
 
 ### L13. New documents go in `documents/`
 - All user-created documents live in `documents/<doc-name>/` subfolders.
+  Source files (`.tex`, `.latexmkrc`) go in `documents/<doc-name>/src/`;
+  generated outputs go in `documents/<doc-name>/`.
 - The `documents/` folder at the repo root is the default location.
-- Each document is self-contained: `.tex`, `.latexmkrc`, `assets/`.
+- Each document is self-contained: `src/` (with `.tex` and `.latexmkrc`),
+  `assets/`.
 - Skills create new document folders inside `documents/` by default.
 - Samples and examples stay in `examples/`; `documents/` is for user work.
 
@@ -109,7 +114,7 @@ approval. Changing them breaks existing documents and reproducibility.
 - The filter uses **global functions** (`Pandoc`, `RawBlock`, `RawInline`) —
   do NOT add a `return` table at the end; return tables silently fail.
 - Format check is `raw.format ~= "latex"` (not `"tex"`).
-- `make all-formats` generates all 8 outputs (MD + DOCX + HTML + EPUB for pt + en).
+- `make all-formats` generates all 6 outputs (MD + DOCX + HTML for pt + en).
 - Generated outputs are gitignored (build artifacts). Only the filter, reference
   DOCX, HTML template, and Python script are committed.
 

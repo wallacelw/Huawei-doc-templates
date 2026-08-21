@@ -3,6 +3,22 @@
 All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
+## v2.4.0 (2026-08-21)
+
+### Remove EPUB format + restructure document layout
+
+- **EPUB removed**: Dropped EPUB as an output format. Technical guides render
+  poorly on e-readers (code blocks, tables, callouts don't survive reflow).
+  PDF + DOCX + HTML + Markdown is the complete output set. Removed
+  `guide-epub.css`, `generate_epub()`, `--epub` flag, Makefile targets, and
+  all EPUB documentation.
+- **src/ subfolder**: Source files (`.tex` and `.latexmkrc`) now live in a
+  `src/` subfolder within each document directory. Generated outputs (PDF,
+  DOCX, MD, HTML) go in the parent directory. This keeps source files
+  organized separately from generated artifacts. `.latexmkrc` sets
+  `$out_dir = '..'` and `$aux_dir = '.'` so the PDF goes to the parent while
+  aux files stay in `src/`.
+
 ## v2.3.0 (2026-08-21)
 
 ### Font configuration across all output formats

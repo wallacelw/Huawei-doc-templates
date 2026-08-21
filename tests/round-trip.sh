@@ -43,9 +43,9 @@ for sample in examples/guide/en examples/guide/pt; do
 
   # Generate Markdown and HTML
   pandoc -f latex+raw_tex --lua-filter="$FILTER" -t markdown --wrap=none \
-    "$REPO_ROOT/$sample/main.tex" -o /tmp/rt.md 2>/dev/null
+    "$REPO_ROOT/$sample/src/main.tex" -o /tmp/rt.md 2>/dev/null
   pandoc -f latex+raw_tex --lua-filter="$FILTER" --template="$HTML_TMPL" -s -t html5 \
-    "$REPO_ROOT/$sample/main.tex" -o /tmp/rt.html 2>/dev/null
+    "$REPO_ROOT/$sample/src/main.tex" -o /tmp/rt.html 2>/dev/null
 
   # Count headings
   md_h1=$(count '^# ' /tmp/rt.md)

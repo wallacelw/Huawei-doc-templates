@@ -51,21 +51,26 @@ up in the class file and this SKILL.md.
    - **Always create a subfolder inside `documents/`** — never scatter files
      directly in the workspace root or `documents/` itself.
    - Inside the folder, create:
-     - `<filename>.tex` — the document, using the skeleton below.
-     - `.latexmkrc` — with `TEXINPUTS` pointing to this template directory.
-       From `documents/<project-name>/`, the relative path to
-       `templates/guide/` is `../../templates/guide/`:
-       ```perl
-        $ENV{TEXINPUTS} = "../../templates/_base/:../../templates/guide/:" . ($ENV{TEXINPUTS} || "");
-       $pdf_mode = 5;
-       $xelatex = 'xelatex -interaction=nonstopmode %O %S';
-       ```
-          - **Timezone:** default `America/Sao_Paulo` (AGENTS.md L4).
-            Override in `.latexmkrc` if needed (see [README.md](../../README.md)).
+     - `src/` subfolder containing:
+       - `<filename>.tex` — the document, using the skeleton below.
+       - `.latexmkrc` — with `TEXINPUTS` pointing to this template directory.
+         From `documents/<project-name>/src/`, the relative path to
+         `templates/guide/` is `../../../templates/guide/`:
+         ```perl
+         $ENV{TEXINPUTS} = "../../../templates/_base/:../../../templates/guide/:" . ($ENV{TEXINPUTS} || "");
+         $pdf_mode = 5;
+         $xelatex = 'xelatex -interaction=nonstopmode %O %S';
+         $out_dir = '..';
+         $aux_dir = '.';
+         ```
+            - **Timezone:** default `America/Sao_Paulo` (AGENTS.md L4).
+              Override in `.latexmkrc` if needed (see [README.md](../../README.md)).
+            - **Output:** `$out_dir = '..'` sends the PDF to the parent directory;
+              `$aux_dir = '.'` keeps aux files in `src/`.
      - `assets/` subfolder for project-specific images and code files.
 
 3. **Compile and verify** with `make project DIR=documents/<project-name>`
-   (or `latexmk <filename>.tex` from inside the project folder).
+   (or `cd src/ && latexmk <filename>.tex` from inside the project folder).
 
 4. **Report** the page count and any warnings to the user.
 
@@ -175,19 +180,22 @@ templates/guide/
 # Each document has its own assets/ folder for project-specific files:
 examples/guide/
 ├── pt/
-│   ├── .latexmkrc  # TEXINPUTS → ../../../templates/guide/
-│   ├── main.tex    # Portuguese sample (reference)
-│   └── assets/     # project-specific images and files
+│   ├── src/
+│   │   ├── .latexmkrc  # TEXINPUTS → ../../../templates/guide/; $out_dir='..'
+│   │   └── main.tex    # Portuguese sample (reference)
+│   └── assets/         # project-specific images and files
 └── en/
-    ├── .latexmkrc
-    ├── main.tex    # English sample (reference)
-    └── assets/     # project-specific images and files
+    ├── src/
+    │   ├── .latexmkrc
+    │   └── main.tex    # English sample (reference)
+    └── assets/         # project-specific images and files
 
 # User-created documents go in documents/ (see Quick start):
 documents/
 └── my-guide/
-    ├── .latexmkrc  # TEXINPUTS → ../../../templates/_base/ + ../../../templates/guide/
-    ├── main.tex
+    ├── src/
+    │   ├── .latexmkrc  # TEXINPUTS → ../../../templates/_base/ + ../../../templates/guide/; $out_dir='..'
+    │   └── main.tex
     └── assets/
 ```
 
@@ -475,7 +483,7 @@ See [templates/guide/README.md](README.md) for the format reference table
 make project DIR=documents/<project-name>   # from repo root (recommended)
 ```
 
-Or `latexmk main.tex` from inside the project folder. See [README.md](../../README.md)
+Or `cd src/ && latexmk main.tex` from inside the project folder. See [README.md](../../README.md)
 for the full Makefile reference and multi-format output options.
 
 **Never use pdflatex** — the class loads `fontspec` which requires XeLaTeX.

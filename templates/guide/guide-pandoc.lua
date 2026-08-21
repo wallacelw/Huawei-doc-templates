@@ -673,7 +673,7 @@ function RawBlock(raw)
 
   -- \image, \imagecap  →  Image (block-level)
   -- \imageplaceholder  →  placeholder para in all formats (the image does
-  -- not exist; emitting a real Image would make EPUB warn on bundling)
+  -- not exist; emitting a real Image would produce broken links in output)
   do
     local caption, path, is_placeholder, desc = parse_image(text)
     if caption and path then

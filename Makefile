@@ -35,40 +35,40 @@ samples: pt en ## Compile both guide samples (PT + EN)
 examples: setup-guide ## Compile the setup-guide and copy its PDF to repo root
 
 pt: ## Compile the Portuguese sample
-	cd $(PT_DIR) && latexmk main.tex
+	cd $(PT_DIR)/src && latexmk main.tex
 
 en: ## Compile the English sample
-	cd $(EN_DIR) && latexmk main.tex
+	cd $(EN_DIR)/src && latexmk main.tex
 
 setup-guide: ## Compile the setup-guide and copy its PDF to repo root
-	cd $(SG_DIR) && latexmk setup-guide.tex
+	cd $(SG_DIR)/src && latexmk setup-guide.tex
 	cp $(SG_DIR)/setup-guide.pdf setup-guide.pdf
 
 project: ## Compile a specific project (make project DIR=<path> [FILE=<name>.tex])
 	@if [ -z "$(DIR)" ]; then echo "Usage: make project DIR=<path> [FILE=<name>.tex]"; exit 1; fi
 	@if [ -z "$(FILE)" ]; then \
-		TEX=$$(ls $(DIR)/*.tex 2>/dev/null | head -1); \
-		if [ -z "$$TEX" ]; then echo "No .tex file found in $(DIR)/"; exit 1; fi; \
+		TEX=$$(ls $(DIR)/src/*.tex 2>/dev/null | head -1); \
+		if [ -z "$$TEX" ]; then TEX=$$(ls $(DIR)/*.tex 2>/dev/null | head -1); fi; \
+		if [ -z "$$TEX" ]; then echo "No .tex file found in $(DIR)/src/ or $(DIR)/"; exit 1; fi; \
 		echo "Compiling $$TEX"; \
-		cd $(DIR) && latexmk $$(basename $$TEX); \
+		cd $$(dirname $$TEX) && latexmk $$(basename $$TEX); \
 	else \
 		echo "Compiling $(DIR)/$(FILE)"; \
-		cd $(DIR) && latexmk $(FILE); \
+		cd $(DIR)/src && latexmk $(FILE); \
 	fi
 
 menu: ## Interactive format menu (delegates to build.sh)
 	./build.sh
 
 # ============================================================================
-##@ Multi-format output (DOCX, Markdown, HTML, EPUB via Pandoc)
+##@ Multi-format output (DOCX, Markdown, HTML via Pandoc)
 # ============================================================================
 
-all-formats: docx md html epub ## Generate all formats (DOCX+MD+HTML+EPUB) for both samples
+all-formats: docx md html ## Generate all formats (DOCX+MD+HTML) for both samples
 
 md:   md-pt md-en   ## Markdown for both samples
 docx: docx-pt docx-en ## DOCX for both samples
 html: html-pt html-en ## HTML for both samples
-epub: epub-pt epub-en ## EPUB for both samples
 
 # Per-sample format targets (advanced — not shown in help summary)
 md-pt:     ; ./build.sh --md examples/guide/pt
@@ -77,8 +77,6 @@ docx-pt:   ; ./build.sh --docx examples/guide/pt
 docx-en:   ; ./build.sh --docx examples/guide/en
 html-pt:   ; ./build.sh --html examples/guide/pt
 html-en:   ; ./build.sh --html examples/guide/en
-epub-pt:   ; ./build.sh --epub examples/guide/pt
-epub-en:   ; ./build.sh --epub examples/guide/en
 
 # ============================================================================
 ##@ Cleanup
@@ -91,27 +89,28 @@ clean-samples: clean-pt clean-en ## Clean both guide samples
 clean-examples: clean-setup-guide ## Clean the setup-guide
 
 clean-pt: ## Clean the Portuguese sample
-	cd $(PT_DIR) && latexmk -C main.tex
+	cd $(PT_DIR)/src && latexmk -C main.tex
 
 clean-en: ## Clean the English sample
-	cd $(EN_DIR) && latexmk -C main.tex
+	cd $(EN_DIR)/src && latexmk -C main.tex
 
 clean-setup-guide: ## Clean the setup-guide and the repo-root PDF copy
-	cd $(SG_DIR) && latexmk -C setup-guide.tex
+	cd $(SG_DIR)/src && latexmk -C setup-guide.tex
 	rm -f setup-guide.pdf
 
-clean-formats: ## Remove generated multi-format files (DOCX/MD/HTML/EPUB)
-	rm -f examples/guide/pt/main.docx examples/guide/pt/main.md examples/guide/pt/main.html examples/guide/pt/main.epub
-	rm -f examples/guide/en/main.docx examples/guide/en/main.md examples/guide/en/main.html examples/guide/en/main.epub
+clean-formats: ## Remove generated multi-format files (DOCX/MD/HTML)
+	rm -f examples/guide/pt/main.docx examples/guide/pt/main.md examples/guide/pt/main.html
+	rm -f examples/guide/en/main.docx examples/guide/en/main.md examples/guide/en/main.html
 
 clean-project: ## Clean a specific project (make clean-project DIR=<path> [FILE=<name>.tex])
 	@if [ -z "$(DIR)" ]; then echo "Usage: make clean-project DIR=<path> [FILE=<name>.tex]"; exit 1; fi
 	@if [ -z "$(FILE)" ]; then \
-		TEX=$$(ls $(DIR)/*.tex 2>/dev/null | head -1); \
-		if [ -z "$$TEX" ]; then echo "No .tex file found in $(DIR)/"; exit 1; fi; \
-		cd $(DIR) && latexmk -C $$(basename $$TEX); \
+		TEX=$$(ls $(DIR)/src/*.tex 2>/dev/null | head -1); \
+		if [ -z "$$TEX" ]; then TEX=$$(ls $(DIR)/*.tex 2>/dev/null | head -1); fi; \
+		if [ -z "$$TEX" ]; then echo "No .tex file found in $(DIR)/src/ or $(DIR)/"; exit 1; fi; \
+		cd $$(dirname $$TEX) && latexmk -C $$(basename $$TEX); \
 	else \
-		cd $(DIR) && latexmk -C $(FILE); \
+		cd $(DIR)/src && latexmk -C $(FILE); \
 	fi
 
 # ============================================================================
@@ -119,5 +118,5 @@ clean-project: ## Clean a specific project (make clean-project DIR=<path> [FILE=
 # ============================================================================
 
 .PHONY: help all samples examples pt en setup-guide project menu
-.PHONY: docx docx-pt docx-en md md-pt md-en html html-pt html-en epub epub-pt epub-en all-formats
+.PHONY: docx docx-pt docx-en md md-pt md-en html html-pt html-en all-formats
 .PHONY: clean clean-samples clean-examples clean-pt clean-en clean-setup-guide clean-project clean-formats
