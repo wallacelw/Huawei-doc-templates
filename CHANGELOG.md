@@ -3,6 +3,22 @@
 All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
+## v2.5.1 (2026-08-21)
+
+### Review fixes: H2-H4 weight, build robustness, CSS variables
+
+- **H2-H4 font weight fixed (L18)**: PDF uses `\normalfont` (regular) for
+  H2-H4. DOCX was bold, HTML was semibold. Fixed both to regular weight.
+- **build.sh post-processing made non-fatal**: `2>/dev/null` + `set -e`
+  could silently kill a successful build. Now warns on failure instead.
+- **pPr creation fixed**: `fix_generated_docx` silently skipped H1 border
+  if `pPr` didn't exist. Now creates it (mirrors `rPr` pattern).
+- **Bold removal in fix_generated_docx**: Added code to strip `<w:b/>`/
+  `<w:bCs/>` from H2-H4 in generated DOCX (pandoc overrides reference doc).
+- **`--fix` argument parsing**: Added missing-path check for direct invocation.
+- **HTML callout labels use CSS variables**: Replaced hardcoded hex with
+  `var(--huawei-red)`, `var(--tip-border)`, `var(--info-border)`.
+
 ## v2.5.0 (2026-08-21)
 
 ### Multi-format styling fixes + L18: PDF is the reference

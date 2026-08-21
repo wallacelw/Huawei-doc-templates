@@ -218,17 +218,25 @@ def fix_generated_docx(docx_path):
             rFonts.set(f"{{{W_NS}}}hAnsi", "HarmonyOS Sans")
 
         # Add bottom border to Heading 1
+        # Fix bold: H2-H4 should be regular weight (matches PDF \normalfont)
+        if heading_id != 'Heading1':
+            for tag in ['b', 'bCs']:
+                for elem in rPr.findall(f"{{{W_NS}}}{tag}"):
+                    rPr.remove(elem)
+
+        # Add bottom border to Heading 1
         if heading_id == 'Heading1':
             pPr = style.find(f"{{{W_NS}}}pPr")
-            if pPr is not None:
-                for pBdr in pPr.findall(f"{{{W_NS}}}pBdr"):
-                    pPr.remove(pBdr)
-                pBdr = etree.SubElement(pPr, f"{{{W_NS}}}pBdr")
-                bottom = etree.SubElement(pBdr, f"{{{W_NS}}}bottom")
-                bottom.set(f"{{{W_NS}}}val", "single")
-                bottom.set(f"{{{W_NS}}}sz", "12")  # 1.5pt = 12 eighth-points
-                bottom.set(f"{{{W_NS}}}space", "1")
-                bottom.set(f"{{{W_NS}}}color", "C7000B")
+            if pPr is None:
+                pPr = etree.SubElement(style, f"{{{W_NS}}}pPr")
+            for pBdr in pPr.findall(f"{{{W_NS}}}pBdr"):
+                pPr.remove(pBdr)
+            pBdr = etree.SubElement(pPr, f"{{{W_NS}}}pBdr")
+            bottom = etree.SubElement(pBdr, f"{{{W_NS}}}bottom")
+            bottom.set(f"{{{W_NS}}}val", "single")
+            bottom.set(f"{{{W_NS}}}sz", "12")  # 1.5pt = 12 eighth-points
+            bottom.set(f"{{{W_NS}}}space", "1")
+            bottom.set(f"{{{W_NS}}}color", "C7000B")
 
     modified_xml = etree.tostring(
         root, xml_declaration=True, encoding="UTF-8", standalone=True
@@ -248,7 +256,10 @@ def fix_generated_docx(docx_path):
 
 
 def main():
-    if len(sys.argv) >= 3 and sys.argv[1] == "--fix":
+    if len(sys.argv) >= 2 and sys.argv[1] == "--fix":
+        if len(sys.argv) < 3:
+            print(f"Usage: {sys.argv[0]} --fix <generated.docx>")
+            sys.exit(1)
         fix_generated_docx(sys.argv[2])
         return
     if len(sys.argv) < 2:
@@ -309,7 +320,7 @@ def main():
             h = doc.styles[level]
         except KeyError:
             h = doc.styles.add_style(level, WD_STYLE_TYPE.PARAGRAPH)
-        set_run_font(h, "HarmonyOS Sans", size, color_hex="1F2328", bold=True)
+        set_run_font(h, "HarmonyOS Sans", size, color_hex="1F2328", bold=False)
 
     # ── Hyperlink ────────────────────────────────────────────────────
     try:

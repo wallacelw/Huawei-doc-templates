@@ -311,7 +311,9 @@ generate_docx() {
     generate_pandoc_format "DOCX" docx docx --reference-doc="$REF_DOCX"
     # Post-process: fix heading styles (pandoc overrides reference doc styles)
     if [ "$DRY_RUN" -eq 0 ] && [ -f "${PROJECT_DIR}/${BASENAME}.docx" ]; then
-        python3 "${REPO_ROOT}/templates/guide/create-reference-docx.py" --fix "${PROJECT_DIR}/${BASENAME}.docx" 2>/dev/null
+        if ! python3 "${REPO_ROOT}/templates/guide/create-reference-docx.py" --fix "${PROJECT_DIR}/${BASENAME}.docx" 2>&1; then
+            echo "  ⚠ Warning: DOCX post-processing failed (heading styles may not match PDF)" >&2
+        fi
     fi
 }
 generate_md()   { generate_pandoc_format "Markdown" markdown md; }
