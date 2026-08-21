@@ -221,7 +221,7 @@ def fix_generated_docx(docx_path):
         # Add bottom border to Heading 1
         # Fix bold: H2-H4 should be regular weight (matches PDF \normalfont)
         if heading_id != 'Heading1':
-            for tag in ['b', 'bCs']:
+            for tag in ['b', 'bCs', 'i', 'iCs']:
                 for elem in rPr.findall(f"{{{W_NS}}}{tag}"):
                     rPr.remove(elem)
 
@@ -274,7 +274,7 @@ def fix_generated_docx(docx_path):
                         sz.set(f"{{{W_NS}}}val", "72")
             break
 
-    # Fix VerbatimChar style: Consolas → Cascadia Code
+    # Fix VerbatimChar style: Consolas → Cascadia Code, 11pt → 10pt (matches PDF)
     for s in root.findall(f"{{{W_NS}}}style"):
         if s.get(f"{{{W_NS}}}styleId") == "VerbatimChar":
             rPr = s.find(f"{{{W_NS}}}rPr")
@@ -283,7 +283,51 @@ def fix_generated_docx(docx_path):
                 if rFonts is not None:
                     rFonts.set(f"{{{W_NS}}}ascii", "Cascadia Code")
                     rFonts.set(f"{{{W_NS}}}hAnsi", "Cascadia Code")
+                for tag in ['sz', 'szCs']:
+                    sz = rPr.find(f"{{{W_NS}}}{tag}")
+                    if sz is not None:
+                        sz.set(f"{{{W_NS}}}val", "20")
+                    else:
+                        sz = etree.SubElement(rPr, f"{{{W_NS}}}{tag}")
+                        sz.set(f"{{{W_NS}}}val", "20")
             break
+
+    # Fix SourceCode style: add left/right indentation + szCs (matches PDF code block)
+    for s in root.findall(f"{{{W_NS}}}style"):
+        if s.get(f"{{{W_NS}}}styleId") == "SourceCode":
+            pPr = s.find(f"{{{W_NS}}}pPr")
+            if pPr is None:
+                pPr = etree.Element(f"{{{W_NS}}}pPr")
+                rPr = s.find(f"{{{W_NS}}}rPr")
+                if rPr is not None:
+                    rPr.addprevious(pPr)
+                else:
+                    s.append(pPr)
+            ind = pPr.find(f"{{{W_NS}}}ind")
+            if ind is None:
+                ind = etree.SubElement(pPr, f"{{{W_NS}}}ind")
+            ind.set(f"{{{W_NS}}}left", "397")   # 0.7cm
+            ind.set(f"{{{W_NS}}}right", "284")   # 0.5cm
+            # Add szCs for complex script consistency
+            rPr = s.find(f"{{{W_NS}}}rPr")
+            if rPr is not None:
+                szCs = rPr.find(f"{{{W_NS}}}szCs")
+                if szCs is None:
+                    szCs = etree.SubElement(rPr, f"{{{W_NS}}}szCs")
+                szCs.set(f"{{{W_NS}}}val", "20")
+            break
+
+    # Fix BodyText/FirstParagraph spacing: 4pt after, 0pt before (matches PDF parskip)
+    for sid in ['BodyText', 'FirstParagraph']:
+        for s in root.findall(f"{{{W_NS}}}style"):
+            if s.get(f"{{{W_NS}}}styleId") == sid:
+                pPr = s.find(f"{{{W_NS}}}pPr")
+                if pPr is not None:
+                    spacing = pPr.find(f"{{{W_NS}}}spacing")
+                    if spacing is not None:
+                        spacing.set(f"{{{W_NS}}}after", "80")
+                        spacing.set(f"{{{W_NS}}}before", "0")
+                break
 
     # Fix all styles: add explicit font names alongside theme references
     # Prevents Word from falling back to Cambria when HarmonyOS Sans
@@ -407,7 +451,7 @@ def main():
     # ── Badge (character style) ──────────────────────────────────────
     style = add_or_get_character_style(doc, "badge")
     set_character_shading(style, "C7000B")
-    set_run_font(style, "Cascadia Code", 9, color_hex="FFFFFF", bold=True)
+    set_run_font(style, "HarmonyOS Sans", 9, color_hex="FFFFFF", bold=True)
 
     # ── Heading 1 — black text + red bottom rule (matches PDF) ─────────
     try:
@@ -474,6 +518,8 @@ def main():
     header.is_linked_to_previous = False
     hp = header.paragraphs[0]
     hp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    for run in list(hp.runs):
+        run._element.getparent().remove(run._element)
     for run in [hp.add_run(), hp.add_run(), hp.add_run(), hp.add_run("Document Title"), hp.add_run()]:
         run.font.size = Pt(10)
         run.font.name = "HarmonyOS Sans"
@@ -497,6 +543,8 @@ def main():
     footer.is_linked_to_previous = False
     fp = footer.paragraphs[0]
     fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    for run in list(fp.runs):
+        run._element.getparent().remove(run._element)
     for run in [fp.add_run(), fp.add_run(), fp.add_run()]:
         run.font.size = Pt(10)
         run.font.name = "HarmonyOS Sans"

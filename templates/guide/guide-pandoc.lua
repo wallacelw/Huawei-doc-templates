@@ -60,6 +60,22 @@ local function read_file(path)
   return content
 end
 
+-- Detect language at filter load time (before AST walk).
+-- RawBlock/RawInline handlers run during the walk, before Pandoc(),
+-- so lang must be set before any handler that calls L().
+do
+  local _sp = nil
+  if PANDOC_STATE and PANDOC_STATE.input_files then
+    for _, f in ipairs(PANDOC_STATE.input_files) do _sp = f; break end
+  end
+  if _sp then
+    local _src = read_file(_sp)
+    if _src and _src:find("\\documentclass%s*%[.*portuguese.*%]%s*{guide}") then
+      lang = "pt"
+    end
+  end
+end
+
 --- Parse balanced-brace argument from position after opening brace.
 --- Returns (content, end_pos) or (nil, nil).
 --- Handles nested braces: \foo{a{b}c} → "a{b}c"
@@ -379,7 +395,6 @@ function Pandoc(doc)
   if source_path then
     local src = read_file(source_path)
     if src then
-      if src:find("\\documentclass%s*%[.*portuguese.*%]%s*{guide}") then lang = "pt" end
       -- Set doc.meta.lang so the HTML template's $lang$ variable works
       doc.meta.lang = (lang == "pt") and "pt" or "en"
       local title = find_cmd_arg(src, "setguidetitle")
@@ -402,6 +417,7 @@ function Pandoc(doc)
         if version and version ~= "" then table.insert(meta_parts, "v" .. version) end
         if date then
           local ds = date:gsub("\\today", os.date("%Y-%m-%d"))
+          ds = ds .. " " .. os.date("%H:%M")
           if ds ~= "" then table.insert(meta_parts, ds) end
         end
         local mt = table.concat(meta_parts, " — ")
@@ -783,6 +799,14 @@ function Header(el)
         el
       })
     end
+  end
+end
+
+-- Strip syntax highlighting classes for DOCX (PDF uses monochrome code)
+function CodeBlock(el)
+  if FORMAT:match("docx") and #el.classes > 0 then
+    el.classes = {}
+    return el
   end
 end
 

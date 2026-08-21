@@ -3,6 +3,34 @@
 All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
+## v2.5.5 (2026-08-22)
+
+### DOCX final polish — bug fixes from end-to-end review
+
+- **Language detection fixed (critical)**: `lang` was set inside `Pandoc()`
+  which runs after the AST walk. Moved to module level so `RawBlock`/`RawInline`
+  handlers have the correct language. Portuguese labels (Importante, Dica,
+  Informação, Histórico de versões) now render correctly in all formats.
+- **Heading4 italic removed**: Pandoc's default H4 includes `<w:i/>`.
+  `fix_generated_docx` now strips `i` and `iCs` along with `b` and `bCs`.
+- **Badge font fixed**: Was Cascadia Code (code font). Now HarmonyOS Sans
+  (body font), matching PDF `\colorbox` which uses the default body font.
+- **Syntax highlighting disabled for DOCX**: PDF uses monochrome fancyvrb.
+  CodeBlock language classes now stripped for DOCX so pandoc doesn't apply
+  colored token styles.
+- **BodyText spacing fixed**: `BodyText` and `FirstParagraph` styles had
+  `after=180 before=180` (9pt). Now `after=80 before=0` (4pt), matching
+  PDF `\parskip=4pt`.
+- **Header/footer idempotent**: `main()` now clears existing runs before
+  adding header/footer fields. Prevents triplication on repeated runs.
+- **SourceCode szCs added**: Added `szCs=20` for complex script consistency.
+- **VerbatimChar 10pt**: Was 11pt (pandoc default). Now 10pt (sz=20),
+  matching PDF code font.
+- **Cover compilation time**: Cover now shows "v1.7.0 — 2026-08-22 02:00"
+  with HH:MM time, matching PDF cover page.
+- **Code block margins**: SourceCode style now has left=0.7cm (397 twips),
+  right=0.5cm (284 twips) indentation, matching PDF code block margins.
+
 ## v2.5.4 (2026-08-22)
 
 ### DOCX styling — match PDF (Tier 2)
