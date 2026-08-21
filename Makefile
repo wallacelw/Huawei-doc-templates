@@ -90,17 +90,20 @@ clean-examples: clean-setup-guide ## Clean the setup-guide
 
 clean-pt: ## Clean the Portuguese sample
 	cd $(PT_DIR)/src && latexmk -C main.tex
+	rm -f $(PT_DIR)/main.pdf
 
 clean-en: ## Clean the English sample
 	cd $(EN_DIR)/src && latexmk -C main.tex
+	rm -f $(EN_DIR)/main.pdf
 
 clean-setup-guide: ## Clean the setup-guide and the repo-root PDF copy
 	cd $(SG_DIR)/src && latexmk -C setup-guide.tex
-	rm -f setup-guide.pdf
+	rm -f $(SG_DIR)/setup-guide.pdf setup-guide.pdf
 
 clean-formats: ## Remove generated multi-format files (DOCX/MD/HTML)
 	rm -f examples/guide/pt/main.docx examples/guide/pt/main.md examples/guide/pt/main.html
 	rm -f examples/guide/en/main.docx examples/guide/en/main.md examples/guide/en/main.html
+	rm -f $(SG_DIR)/setup-guide.docx $(SG_DIR)/setup-guide.md $(SG_DIR)/setup-guide.html
 
 clean-project: ## Clean a specific project (make clean-project DIR=<path> [FILE=<name>.tex])
 	@if [ -z "$(DIR)" ]; then echo "Usage: make clean-project DIR=<path> [FILE=<name>.tex]"; exit 1; fi

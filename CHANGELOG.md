@@ -3,6 +3,17 @@
 All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
+## v2.5.6 (2026-08-22)
+
+### Makefile fix
+
+- **`make clean` now removes all build artifacts**: `latexmk -C` run from
+  `src/` couldn't reach PDFs output to the parent directory (`$out_dir = '..'`
+  in `.latexmkrc`). Added explicit `rm -f` for each PDF in the document root.
+- **`clean-formats` now covers setup-guide**: Previously only cleaned
+  `examples/guide/pt` and `examples/guide/en`. Now also removes
+  `examples/setup-guide/setup-guide.{docx,md,html}`.
+
 ## v2.5.5 (2026-08-22)
 
 ### DOCX final polish — bug fixes from end-to-end review
