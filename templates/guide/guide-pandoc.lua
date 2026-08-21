@@ -672,11 +672,12 @@ function RawBlock(raw)
   end
 
   -- \image, \imagecap  →  Image (block-level)
-  -- \imageplaceholder  →  placeholder para for DOCX/HTML, Image for Markdown
+  -- \imageplaceholder  →  placeholder para in all formats (the image does
+  -- not exist; emitting a real Image would make EPUB warn on bundling)
   do
     local caption, path, is_placeholder, desc = parse_image(text)
     if caption and path then
-      if is_placeholder and (FORMAT:match("docx") or FORMAT:match("html")) then
+      if is_placeholder then
         return pandoc.Para({pandoc.Emph({pandoc.Str("[Image placeholder: " .. desc .. "]")})})
       end
       return pandoc.Para({pandoc.Image(caption, path)})

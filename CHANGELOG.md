@@ -3,6 +3,17 @@
 All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
+## v2.2.1 (2026-08-20)
+
+### Fix: \imageplaceholder no longer emits real image references
+
+- The block-level `\imageplaceholder` handler emitted a real `pandoc.Image`
+  for Markdown/EPUB output, pointing to a non-existent file. EPUB then
+  warned ("Could not fetch resource") when bundling. Now `\imageplaceholder`
+  emits a placeholder paragraph in all formats, matching the inline handler
+  and the semantic intent (a placeholder is for images that don't exist).
+- Updated the imageplaceholder test expected output.
+
 ## v2.2.0 (2026-08-20)
 
 ### Self-documenting Makefile
