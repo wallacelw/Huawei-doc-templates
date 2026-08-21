@@ -286,6 +286,8 @@ generate_pandoc_format() {
     local err
     err=$(cd "$PROJECT_DIR" && pandoc -f latex+raw_tex \
         --lua-filter="$LUA_FILTER" \
+        --resource-path=".:${REPO_ROOT}/templates/guide/common-assets" \
+        --number-sections \
         "${extra_args[@]}" \
         -t "$fmt" "$TEX_REL" -o "$out" 2>&1) || {
         RESULTS_FAIL+=("$label:pandoc failed")

@@ -25,12 +25,14 @@ local labels = {
     genobj = "General Objective:", obj = "Objective:",
     prereq = "Prerequisites:", stepbystep = "Step by step:",
     changelog = "Changelog",
+    toc = "Table of Contents",
   },
   pt = {
     warning = "Importante", tip = "Dica", infobox = "Informação",
     genobj = "Objetivo Geral:", obj = "Objetivo:",
     prereq = "Pré-requisitos:", stepbystep = "Passo a passo:",
     changelog = "Histórico de versões",
+    toc = "Sumário",
   },
 }
 
@@ -404,6 +406,8 @@ function Pandoc(doc)
         end
         local mt = table.concat(meta_parts, " — ")
         local cb = pandoc.Blocks({})
+        -- Cover logo (centered, 3.6cm wide — matches PDF)
+        cb:insert(pandoc.Para({pandoc.Image(pandoc.Inlines({}), "huawei-logo-cover.png", "", pandoc.Attr("", {}, {width = "3.6cm"}))}))
         cb:insert(pandoc.RawBlock("openxml",
           '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="600" w:after="200"/></w:pPr>' ..
           '<w:r><w:rPr><w:rFonts w:ascii="HarmonyOS Sans" w:hAnsi="HarmonyOS Sans"/>' ..
@@ -418,6 +422,22 @@ function Pandoc(doc)
         end
         cb:insert(pandoc.RawBlock("openxml", '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'))
         for i = #cb, 1, -1 do doc.blocks:insert(1, cb[i]) end
+        -- Word TOC field (right-aligned 22pt heading + TOC + page break)
+        local toc_title = L("toc")
+        local toc_blocks = pandoc.Blocks({})
+        toc_blocks:insert(pandoc.RawBlock("openxml",
+          '<w:p><w:pPr><w:jc w:val="right"/></w:pPr>' ..
+          '<w:r><w:rPr><w:rFonts w:ascii="HarmonyOS Sans" w:hAnsi="HarmonyOS Sans"/>' ..
+          '<w:b/><w:sz w:val="44"/><w:szCs w:val="44"/></w:rPr>' ..
+          '<w:t>' .. toc_title .. '</w:t></w:r></w:p>'))
+        toc_blocks:insert(pandoc.RawBlock("openxml",
+          '<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r>' ..
+          '<w:r><w:instrText xml:space="preserve"> TOC \\o "1-3" \\h \\z \\u </w:instrText></w:r>' ..
+          '<w:r><w:fldChar w:fldCharType="separate"/></w:r>' ..
+          '<w:r><w:t>' .. toc_title .. '</w:t></w:r>' ..
+          '<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>'))
+        toc_blocks:insert(pandoc.RawBlock("openxml", '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'))
+        for i = #toc_blocks, 1, -1 do doc.blocks:insert(#cb + 1, toc_blocks[i]) end
         doc.meta.date = nil
       end
     end
@@ -575,7 +595,12 @@ local function handle_objectives_env(text)
   end
 
   if #blocks == 0 then blocks = parse_latex_blocks(body) end
-  if FORMAT:match("docx") or FORMAT:match("html5") then
+  if FORMAT:match("docx") then
+    -- Add 1.5pt black bottom rule (matches PDF \hrulefill after objectives)
+    blocks:insert(pandoc.RawBlock("openxml",
+      '<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="12" w:space="1" w:color="000000"/></w:pBdr></w:pPr></w:p>'))
+    return pandoc.Div(blocks, pandoc.Attr("", {"objectives"}, {}))
+  elseif FORMAT:match("html5") then
     return pandoc.Div(blocks, pandoc.Attr("", {"objectives"}, {}))
   else
     return pandoc.BlockQuote(blocks)
@@ -745,6 +770,23 @@ local block_env_handlers = {
 }
 
 -- =====================================================================
+--  Header handler — page break before H1 in DOCX (matches PDF \clearpage)
+-- =====================================================================
+
+local h1_count = 0
+function Header(el)
+  if FORMAT:match("docx") and el.level == 1 then
+    h1_count = h1_count + 1
+    if h1_count > 1 then
+      return pandoc.Blocks({
+        pandoc.RawBlock("openxml", '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'),
+        el
+      })
+    end
+  end
+end
+
+-- =====================================================================
 --  RawBlock handler
 -- =====================================================================
 
@@ -786,18 +828,26 @@ function RawBlock(raw)
     end
   end
 
-  -- \note{...}  →  callout with "Note:" label (block-level)
+  -- \note{...}  →  italic text (PDF: \textit); DOCX: plain italic, not callout
   do
     local arg = text:match("\\note%s*(%b{})")
-    if arg then return make_callout("infobox", "Note", parse_latex_blocks(arg:sub(2, -2))) end
+    if arg then
+      if FORMAT:match("docx") then
+        return pandoc.Para({pandoc.Emph(parse_latex_inlines(arg:sub(2, -2)))})
+      else
+        return make_callout("infobox", "Note", parse_latex_blocks(arg:sub(2, -2)))
+      end
+    end
   end
 
-  -- \badge{...}  →  bold bracketed text (block-level)
+  -- \badge{...}  →  red pill badge (DOCX: custom-style character; HTML: badge class)
   do
     local arg = text:match("\\badge%s*(%b{})")
     if arg then
       local content = arg:sub(2, -2)
-      if FORMAT:match("docx") or FORMAT:match("html5") then
+      if FORMAT:match("docx") then
+        return pandoc.Para({pandoc.Span(pandoc.Inlines({pandoc.Str(content)}), pandoc.Attr("", {}, {["custom-style"] = "badge"}))})
+      elseif FORMAT:match("html5") then
         return pandoc.Div(pandoc.Blocks({pandoc.Para({pandoc.Str(content)})}), pandoc.Attr("", {"badge"}, {}))
       else
         return pandoc.Para({pandoc.Strong({pandoc.Str("[" .. content .. "]")})})

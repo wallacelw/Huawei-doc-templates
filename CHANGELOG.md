@@ -3,6 +3,28 @@
 All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
+## v2.5.4 (2026-08-22)
+
+### DOCX styling — match PDF (Tier 2)
+
+- **TOC**: Word TOC field inserted after cover page (right-aligned 22pt bold
+  heading + `TOC \o "1-3" \h \z \u` field + page break). Replaces stripped
+  `\maketoc`. Heading is language-aware ("Sumário" / "Table of Contents").
+- **Section numbers**: `--number-sections` added to pandoc invocation. Pandoc
+  renders numbers with `SectionNumber` character style + tab separator.
+- **H1 page breaks**: Page break inserted before each H1 (except the first,
+  which follows the TOC page break) — matches PDF `\clearpage` before
+  `\section`.
+- **Cover logo**: `pandoc.Image` inserted on cover page (centered, 3.6cm wide).
+  `--resource-path` added to pandoc to resolve `common-assets/` images.
+- **Badge**: Switched from `Div` with class "badge" to `Span` with
+  `custom-style="badge"` — pandoc now applies the badge character style (red
+  background, white bold text).
+- **Objectives border**: 1.5pt black bottom rule added after objectives block
+  via `RawBlock("openxml")` — matches PDF `\hrulefill`.
+- **\note semantics**: Changed from infobox callout to plain italic paragraph
+  for DOCX — matches PDF `\textit{...}`.
+
 ## v2.5.3 (2026-08-22)
 
 ### DOCX styling overhaul — match PDF (Tier 1)
