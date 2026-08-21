@@ -3,6 +3,26 @@
 All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
+## v2.5.10 (2026-08-22)
+
+### TOC and navigation fixes
+
+- **TOC field marked dirty**: Added `w:dirty="true"` to the TOC field's
+  `fldChar` begin element. Without this, Word didn't know the field needed
+  updating — the TOC showed placeholder text instead of actual entries.
+- **Cached TOC entries**: Generated heading text as cached content inside the
+  TOC field (between `separate` and `end` fldChar). The TOC is now visible
+  immediately when opening the document, with section numbers and indentation.
+  When Word updates the field, it replaces cached entries with full TOC
+  (hyperlinks + page numbers).
+- **Multi-paragraph field structure**: Changed TOC field from single paragraph
+  to multi-paragraph (begin paragraph + entry paragraphs + end paragraph),
+  matching Word's native TOC field structure.
+- **Navigation pane**: Heading styles confirmed correct (`outlineLvl` 0-3,
+  `qFormat`, `uiPriority`, `basedOn=Normal`). The navigation pane issue was
+  caused by the empty TOC — with cached entries now visible, the document
+  structure is immediately apparent.
+
 ## v2.5.9 (2026-08-22)
 
 ### DOCX fixes: callout spacing, TOC, navigation

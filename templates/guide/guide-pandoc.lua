@@ -444,12 +444,45 @@ function Pandoc(doc)
         toc_blocks:insert(pandoc.Div(
             {pandoc.Para({pandoc.Str(toc_title)})},
             pandoc.Attr("", {}, {["custom-style"] = "TOCTitle"})))
+        -- Generate cached TOC entries from document headings (visible before Word updates field)
+        local toc_entries_xml = ""
+        local h1, h2, h3 = 0, 0, 0
+        for _, blk in ipairs(doc.blocks) do
+          if blk.t == "Header" and blk.level <= 3 then
+            local section = ""
+            if blk.level == 1 then
+              h1 = h1 + 1; h2 = 0; h3 = 0
+              section = tostring(h1)
+            elseif blk.level == 2 then
+              h2 = h2 + 1; h3 = 0
+              section = string.format("%d.%d", h1, h2)
+            elseif blk.level == 3 then
+              h3 = h3 + 1
+              section = string.format("%d.%d.%d", h1, h2, h3)
+            end
+            local text = ""
+            for _, il in ipairs(blk.content) do
+              if il.t == "Str" then text = text .. il.text
+              elseif il.t == "Space" then text = text .. " "
+              end
+            end
+            text = text:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+            local indent = (blk.level - 1) * 420
+            toc_entries_xml = toc_entries_xml ..
+              string.format('<w:p><w:pPr><w:ind w:left="%d"/><w:spacing w:after="40"/></w:pPr>' ..
+              '<w:r><w:t xml:space="preserve">%s\u{A0}%s</w:t></w:r></w:p>', indent, section, text)
+          end
+        end
+        -- TOC field: multi-paragraph structure with cached entries
         toc_blocks:insert(pandoc.RawBlock("openxml",
-          '<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r>' ..
+          '<w:p><w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r>' ..
           '<w:r><w:instrText xml:space="preserve"> TOC \\o "1-3" \\h \\z \\u </w:instrText></w:r>' ..
-          '<w:r><w:fldChar w:fldCharType="separate"/></w:r>' ..
-          '<w:r><w:t>' .. toc_title .. '</w:t></w:r>' ..
-          '<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>'))
+          '<w:r><w:fldChar w:fldCharType="separate"/></w:r></w:p>'))
+        if toc_entries_xml ~= "" then
+          toc_blocks:insert(pandoc.RawBlock("openxml", toc_entries_xml))
+        end
+        toc_blocks:insert(pandoc.RawBlock("openxml",
+          '<w:p><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>'))
         toc_blocks:insert(pandoc.RawBlock("openxml", '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'))
         for i = #toc_blocks, 1, -1 do doc.blocks:insert(#cb + 1, toc_blocks[i]) end
         doc.meta.date = nil
