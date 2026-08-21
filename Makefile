@@ -64,19 +64,22 @@ menu: ## Interactive format menu (delegates to build.sh)
 ##@ Multi-format output (DOCX, Markdown, HTML via Pandoc)
 # ============================================================================
 
-all-formats: docx md html ## Generate all formats (DOCX+MD+HTML) for both samples
+all-formats: docx md html ## Generate all formats (DOCX+MD+HTML) for samples + setup-guide
 
-md:   md-pt md-en   ## Markdown for both samples
-docx: docx-pt docx-en ## DOCX for both samples
-html: html-pt html-en ## HTML for both samples
+md:   md-pt md-en md-sg   ## Markdown for both samples + setup-guide
+docx: docx-pt docx-en docx-sg ## DOCX for both samples + setup-guide
+html: html-pt html-en html-sg ## HTML for both samples + setup-guide
 
 # Per-sample format targets (advanced — not shown in help summary)
 md-pt:     ; ./build.sh --md examples/guide/pt
 md-en:     ; ./build.sh --md examples/guide/en
+md-sg:     ; ./build.sh --md $(SG_DIR)
 docx-pt:   ; ./build.sh --docx examples/guide/pt
 docx-en:   ; ./build.sh --docx examples/guide/en
+docx-sg:   ; ./build.sh --docx $(SG_DIR)
 html-pt:   ; ./build.sh --html examples/guide/pt
 html-en:   ; ./build.sh --html examples/guide/en
+html-sg:   ; ./build.sh --html $(SG_DIR)
 
 # ============================================================================
 ##@ Cleanup
@@ -121,5 +124,5 @@ clean-project: ## Clean a specific project (make clean-project DIR=<path> [FILE=
 # ============================================================================
 
 .PHONY: help all samples examples pt en setup-guide project menu
-.PHONY: docx docx-pt docx-en md md-pt md-en html html-pt html-en all-formats
+.PHONY: docx docx-pt docx-en docx-sg md md-pt md-en md-sg html html-pt html-en html-sg all-formats
 .PHONY: clean clean-samples clean-examples clean-pt clean-en clean-setup-guide clean-project clean-formats

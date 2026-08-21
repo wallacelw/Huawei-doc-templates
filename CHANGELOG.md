@@ -3,6 +3,15 @@
 All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
+## v2.5.7 (2026-08-22)
+
+### Makefile fix
+
+- **`make all-formats` now generates setup-guide formats**: Previously only
+  generated DOCX/MD/HTML for `examples/guide/pt` and `examples/guide/en`.
+  Added `docx-sg`, `md-sg`, `html-sg` targets. `make all` now produces all
+  9 format outputs (3 formats × 3 documents).
+
 ## v2.5.6 (2026-08-22)
 
 ### Makefile fix
