@@ -3,6 +3,43 @@
 All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
+## v2.5.8 (2026-08-22)
+
+### DOCX style architecture overhaul
+
+**Cover image centering fixed**: Defined `CoverLogo` named style with
+`jc=center` and applied via `custom-style` in Lua filter. The cover logo
+is now horizontally centered, matching PDF's `\centering`.
+
+**Vertical spacing fixed**: All heading after-spacing was 0 (pandoc defaults
+never corrected). Now matches PDF `guide.cls` titlespacing values:
+- H1: before=0, after=30pt
+- H2: before=30pt, after=6pt
+- H3: before=10pt, after=4pt
+- H4: before=8pt, after=4pt
+
+**Body line spacing**: Added `line=280 lineRule=atLeast` (14pt leading) to
+docDefaults, matching PDF's `\@setfontsize\normalsize{10.5}{14}`.
+
+**Callout/code spacing**: Added 6pt before/after to `warning`, `tip`,
+`infobox`, and `SourceCode` styles (was 0).
+
+**Title spacing**: Fixed to before=62pt, after=128pt to match PDF cover
+layout (`\vspace{2.2cm}` + `\vspace{4.5cm}`).
+
+**New named styles** (replacing ad-hoc raw OpenXML):
+- `CoverLogo` — centered, 10pt before/after
+- `CoverText` — centered, 30pt before, 10pt after, 16pt
+- `CoverMeta` — centered, 5pt before, 10pt after, 12pt
+- `TOCTitle` — right-aligned, 22pt bold
+- `ImageBlock` — centered, 6pt before/after (also fixes body image centering)
+- `ObjectivesRule` — bottom border 1.5pt black
+
+**Architecture**: Lua filter now emits `custom-style` attributes instead of
+raw OpenXML for cover page, TOC title, body images, and objectives rule.
+Raw OpenXML retained only for table structures, field codes, and page breaks
+(elements that cannot be controlled via paragraph styles).
+
 ## v2.5.7 (2026-08-22)
 
 ### Makefile fix

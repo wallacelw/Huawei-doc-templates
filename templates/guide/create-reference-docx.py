@@ -88,6 +88,28 @@ def set_bottom_border(style, color_hex, size_pt=1.5):
         pPr.append(pBdr)
 
 
+def set_paragraph_border(style, side, size_str, color_hex):
+    """Add a paragraph border via OXML (pPr/pBdr/<side>).
+
+    side: 'bottom', 'top', 'left', 'right'
+    size_str: e.g. '1.5pt' — parsed to eighth-points for w:sz
+    color_hex: e.g. '000000'
+    """
+    color_hex = color_hex.replace("#", "")
+    size_pt = float(size_str.replace("pt", ""))
+    size_eighth_pt = int(size_pt * 8)
+    pPr = style.element.get_or_add_pPr()
+    for existing in pPr.findall(qn("w:pBdr")):
+        pPr.remove(existing)
+    pBdr = parse_xml(
+        f'<w:pBdr {nsdecls("w")}>'
+        f'  <w:{side} w:val="single" w:sz="{size_eighth_pt}" '
+        f'w:space="1" w:color="{color_hex}"/>'
+        f'</w:pBdr>'
+    )
+    pPr.append(pBdr)
+
+
 def set_left_indent(style, cm_value):
     """Set left indent on a paragraph style."""
     pf = style.paragraph_format
@@ -251,6 +273,24 @@ def fix_generated_docx(docx_path):
                     sz = etree.SubElement(rPr, f"{{{W_NS}}}{tag}")
                     sz.set(f"{{{W_NS}}}val", target_sz)
 
+        # Fix heading spacing to match PDF (guide.cls titlespacing values)
+        heading_spacing = {
+            'Heading1': ('0', '600'),    # before=0, after=30pt
+            'Heading2': ('600', '120'),  # before=30pt, after=6pt
+            'Heading3': ('200', '80'),   # before=10pt, after=4pt
+            'Heading4': ('160', '80'),   # before=8pt, after=4pt
+        }
+        target_spacing = heading_spacing.get(heading_id)
+        if target_spacing:
+            pPr = style.find(f"{{{W_NS}}}pPr")
+            if pPr is None:
+                pPr = etree.SubElement(style, f"{{{W_NS}}}pPr")
+            spacing = pPr.find(f"{{{W_NS}}}spacing")
+            if spacing is None:
+                spacing = etree.SubElement(pPr, f"{{{W_NS}}}spacing")
+            spacing.set(f"{{{W_NS}}}before", target_spacing[0])
+            spacing.set(f"{{{W_NS}}}after", target_spacing[1])
+
     # Fix Title style (cover page): 36pt, near-black, HarmonyOS Sans
     for s in root.findall(f"{{{W_NS}}}style"):
         if s.get(f"{{{W_NS}}}styleId") == "Title":
@@ -272,6 +312,16 @@ def fix_generated_docx(docx_path):
                     sz = rPr.find(f"{{{W_NS}}}{tag}")
                     if sz is not None:
                         sz.set(f"{{{W_NS}}}val", "72")
+                # Fix Title spacing for cover page (matches PDF guide.cls)
+                # before=62pt (~2.2cm), after=128pt (~4.5cm)
+                pPr = s.find(f"{{{W_NS}}}pPr")
+                if pPr is None:
+                    pPr = etree.SubElement(s, f"{{{W_NS}}}pPr")
+                spacing = pPr.find(f"{{{W_NS}}}spacing")
+                if spacing is None:
+                    spacing = etree.SubElement(pPr, f"{{{W_NS}}}spacing")
+                spacing.set(f"{{{W_NS}}}before", "1248")  # 62pt
+                spacing.set(f"{{{W_NS}}}after", "2560")    # 128pt
             break
 
     # Fix VerbatimChar style: Consolas → Cascadia Code, 11pt → 10pt (matches PDF)
@@ -317,6 +367,41 @@ def fix_generated_docx(docx_path):
                 szCs.set(f"{{{W_NS}}}val", "20")
             break
 
+    # Fix callout and code style spacing: 6pt before, 6pt after (matches PDF)
+    for sid in ['warning', 'tip', 'infobox', 'SourceCode']:
+        for s in root.findall(f"{{{W_NS}}}style"):
+            if s.get(f"{{{W_NS}}}styleId") == sid:
+                pPr = s.find(f"{{{W_NS}}}pPr")
+                if pPr is None:
+                    pPr = etree.SubElement(s, f"{{{W_NS}}}pPr")
+                spacing = pPr.find(f"{{{W_NS}}}spacing")
+                if spacing is None:
+                    spacing = etree.SubElement(pPr, f"{{{W_NS}}}spacing")
+                spacing.set(f"{{{W_NS}}}before", "120")  # 6pt
+                spacing.set(f"{{{W_NS}}}after", "120")   # 6pt
+                break
+
+    # Fix justification for custom styles (python-docx doesn't persist .alignment
+    # on custom styles, so we set <w:jc> directly)
+    style_jc = {
+        'CoverLogo': 'center',
+        'CoverText': 'center',
+        'CoverMeta': 'center',
+        'TOCTitle': 'right',
+        'ImageBlock': 'center',
+    }
+    for sid, jc_val in style_jc.items():
+        for s in root.findall(f"{{{W_NS}}}style"):
+            if s.get(f"{{{W_NS}}}styleId") == sid:
+                pPr = s.find(f"{{{W_NS}}}pPr")
+                if pPr is None:
+                    pPr = etree.SubElement(s, f"{{{W_NS}}}pPr")
+                jc = pPr.find(f"{{{W_NS}}}jc")
+                if jc is None:
+                    jc = etree.SubElement(pPr, f"{{{W_NS}}}jc")
+                jc.set(f"{{{W_NS}}}val", jc_val)
+                break
+
     # Fix BodyText/FirstParagraph spacing: 4pt after, 0pt before (matches PDF parskip)
     for sid in ['BodyText', 'FirstParagraph']:
         for s in root.findall(f"{{{W_NS}}}style"):
@@ -361,6 +446,8 @@ def fix_generated_docx(docx_path):
                 spacing = pPr.find(f"{{{W_NS}}}spacing")
                 if spacing is not None:
                     spacing.set(f"{{{W_NS}}}after", "80")
+                    spacing.set(f"{{{W_NS}}}line", "280")
+                    spacing.set(f"{{{W_NS}}}lineRule", "atLeast")
             break
 
     # Fix docDefaults: 10.5pt (sz=21), spacing after=80 (4pt parskip)
@@ -384,6 +471,8 @@ def fix_generated_docx(docx_path):
                 spacing = pPr.find(f"{{{W_NS}}}spacing")
                 if spacing is not None:
                     spacing.set(f"{{{W_NS}}}after", "80")
+                    spacing.set(f"{{{W_NS}}}line", "280")
+                    spacing.set(f"{{{W_NS}}}lineRule", "atLeast")
 
     modified_xml = etree.tostring(
         root, xml_declaration=True, encoding="UTF-8", standalone=True
@@ -452,6 +541,51 @@ def main():
     style = add_or_get_character_style(doc, "badge")
     set_character_shading(style, "C7000B")
     set_run_font(style, "HarmonyOS Sans", 9, color_hex="FFFFFF", bold=True)
+
+    # ── CoverLogo (paragraph style) ───────────────────────────────────
+    style = add_or_get_paragraph_style(doc, "CoverLogo")
+    style.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    pf = style.paragraph_format
+    pf.space_before = Pt(10)
+    pf.space_after = Pt(10)
+
+    # ── CoverText (paragraph style) ──────────────────────────────────
+    style = add_or_get_paragraph_style(doc, "CoverText")
+    style.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    pf = style.paragraph_format
+    pf.space_before = Pt(30)
+    pf.space_after = Pt(10)
+    set_run_font(style, "HarmonyOS Sans", 16, color_hex="1F2328")
+
+    # ── CoverMeta (paragraph style) ──────────────────────────────────
+    style = add_or_get_paragraph_style(doc, "CoverMeta")
+    style.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    pf = style.paragraph_format
+    pf.space_before = Pt(5)
+    pf.space_after = Pt(10)
+    set_run_font(style, "HarmonyOS Sans", 12, color_hex="595959")
+
+    # ── TOCTitle (paragraph style) ───────────────────────────────────
+    style = add_or_get_paragraph_style(doc, "TOCTitle")
+    style.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    pf = style.paragraph_format
+    pf.space_before = Pt(0)
+    pf.space_after = Pt(10)
+    set_run_font(style, "HarmonyOS Sans", 22, color_hex="1F2328", bold=True)
+
+    # ── ImageBlock (paragraph style) ─────────────────────────────────
+    style = add_or_get_paragraph_style(doc, "ImageBlock")
+    style.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    pf = style.paragraph_format
+    pf.space_before = Pt(6)
+    pf.space_after = Pt(6)
+
+    # ── ObjectivesRule (paragraph style) ─────────────────────────────
+    style = add_or_get_paragraph_style(doc, "ObjectivesRule")
+    pf = style.paragraph_format
+    pf.space_before = Pt(4)
+    pf.space_after = Pt(10)
+    set_paragraph_border(style, "bottom", "1.5pt", "000000")
 
     # ── Heading 1 — black text + red bottom rule (matches PDF) ─────────
     try:

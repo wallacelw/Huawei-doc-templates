@@ -423,29 +423,25 @@ function Pandoc(doc)
         local mt = table.concat(meta_parts, " — ")
         local cb = pandoc.Blocks({})
         -- Cover logo (centered, 3.6cm wide — matches PDF)
-        cb:insert(pandoc.Para({pandoc.Image(pandoc.Inlines({}), "huawei-logo-cover.png", "", pandoc.Attr("", {}, {width = "3.6cm"}))}))
-        cb:insert(pandoc.RawBlock("openxml",
-          '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="600" w:after="200"/></w:pPr>' ..
-          '<w:r><w:rPr><w:rFonts w:ascii="HarmonyOS Sans" w:hAnsi="HarmonyOS Sans"/>' ..
-          '<w:sz w:val="32"/><w:szCs w:val="32"/></w:rPr>' ..
-          '<w:t>' .. ct:gsub("&", "&amp;") .. '</w:t></w:r></w:p>'))
+        cb:insert(pandoc.Div(
+            {pandoc.Para({pandoc.Image(pandoc.Inlines({}), "huawei-logo-cover.png", "", pandoc.Attr("", {}, {width = "3.6cm"}))})},
+            pandoc.Attr("", {}, {["custom-style"] = "CoverLogo"})))
+        cb:insert(pandoc.Div(
+            {pandoc.Para({pandoc.Str(ct)})},
+            pandoc.Attr("", {}, {["custom-style"] = "CoverText"})))
         if mt ~= "" then
-          cb:insert(pandoc.RawBlock("openxml",
-            '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="100" w:after="200"/></w:pPr>' ..
-            '<w:r><w:rPr><w:rFonts w:ascii="HarmonyOS Sans" w:hAnsi="HarmonyOS Sans"/>' ..
-            '<w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr>' ..
-            '<w:t>' .. mt:gsub("&", "&amp;") .. '</w:t></w:r></w:p>'))
+          cb:insert(pandoc.Div(
+              {pandoc.Para({pandoc.Str(mt)})},
+              pandoc.Attr("", {}, {["custom-style"] = "CoverMeta"})))
         end
         cb:insert(pandoc.RawBlock("openxml", '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'))
         for i = #cb, 1, -1 do doc.blocks:insert(1, cb[i]) end
         -- Word TOC field (right-aligned 22pt heading + TOC + page break)
         local toc_title = L("toc")
         local toc_blocks = pandoc.Blocks({})
-        toc_blocks:insert(pandoc.RawBlock("openxml",
-          '<w:p><w:pPr><w:jc w:val="right"/></w:pPr>' ..
-          '<w:r><w:rPr><w:rFonts w:ascii="HarmonyOS Sans" w:hAnsi="HarmonyOS Sans"/>' ..
-          '<w:b/><w:sz w:val="44"/><w:szCs w:val="44"/></w:rPr>' ..
-          '<w:t>' .. toc_title .. '</w:t></w:r></w:p>'))
+        toc_blocks:insert(pandoc.Div(
+            {pandoc.Para({pandoc.Str(toc_title)})},
+            pandoc.Attr("", {}, {["custom-style"] = "TOCTitle"})))
         toc_blocks:insert(pandoc.RawBlock("openxml",
           '<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r>' ..
           '<w:r><w:instrText xml:space="preserve"> TOC \\o "1-3" \\h \\z \\u </w:instrText></w:r>' ..
@@ -612,9 +608,10 @@ local function handle_objectives_env(text)
 
   if #blocks == 0 then blocks = parse_latex_blocks(body) end
   if FORMAT:match("docx") then
-    -- Add 1.5pt black bottom rule (matches PDF \hrulefill after objectives)
-    blocks:insert(pandoc.RawBlock("openxml",
-      '<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="12" w:space="1" w:color="000000"/></w:pBdr></w:pPr></w:p>'))
+    -- Add bottom rule via named style (matches PDF \hrulefill after objectives)
+    blocks:insert(pandoc.Div(
+        {pandoc.Para({pandoc.Str("\u{200B}")})},
+        pandoc.Attr("", {}, {["custom-style"] = "ObjectivesRule"})))
     return pandoc.Div(blocks, pandoc.Attr("", {"objectives"}, {}))
   elseif FORMAT:match("html5") then
     return pandoc.Div(blocks, pandoc.Attr("", {"objectives"}, {}))
@@ -847,6 +844,11 @@ function RawBlock(raw)
     if caption and path then
       if is_placeholder then
         return pandoc.Para({pandoc.Emph({pandoc.Str("[Image placeholder: " .. desc .. "]")})})
+      end
+      if FORMAT:match("docx") then
+        return pandoc.Div(
+            {pandoc.Para({pandoc.Image(caption, path)})},
+            pandoc.Attr("", {}, {["custom-style"] = "ImageBlock"}))
       end
       return pandoc.Para({pandoc.Image(caption, path)})
     end
