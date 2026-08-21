@@ -225,7 +225,7 @@ local function make_callout(cls, label, content)
   if FORMAT:match("docx") then
     local div_content = pandoc.Blocks({label_para})
     div_content:extend(content)
-    return pandoc.Div(div_content, pandoc.Attr("", {cls}, {}))
+    return pandoc.Div(div_content, pandoc.Attr("", {}, {["custom-style"] = cls}))
 
   elseif FORMAT:match("markdown") then
     -- Avoid double colon if label already ends with ":"

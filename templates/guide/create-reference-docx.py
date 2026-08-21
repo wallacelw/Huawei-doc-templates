@@ -66,6 +66,27 @@ def set_left_border(style, color_hex, size_pt=3):
     pPr.append(pBdr)
 
 
+def set_bottom_border(style, color_hex, size_pt=1.5):
+    """Add a bottom paragraph border via OXML (pPr/pBdr/bottom)."""
+    color_hex = color_hex.replace("#", "")
+    size_eighth_pt = int(size_pt * 8)
+    pPr = style.element.get_or_add_pPr()
+    for existing in pPr.findall(qn("w:pBdr")):
+        pPr.remove(existing)
+    pBdr = parse_xml(
+        f'<w:pBdr {nsdecls("w")}>'
+        f'  <w:bottom w:val="single" w:sz="{size_eighth_pt}" '
+        f'w:space="1" w:color="{color_hex}"/>'
+        f'</w:pBdr>'
+    )
+    # Insert before spacing (OOXML order: pBdr before spacing)
+    spacing = pPr.find(qn("w:spacing"))
+    if spacing is not None:
+        spacing.addprevious(pBdr)
+    else:
+        pPr.append(pBdr)
+
+
 def set_left_indent(style, cm_value):
     """Set left indent on a paragraph style."""
     pf = style.paragraph_format
@@ -146,7 +167,90 @@ def set_theme_fonts(doc, body_font):
                         rfonts.set(qn(f"w:{attr}"), body_font)
 
 
+def fix_generated_docx(docx_path):
+    """Post-process a pandoc-generated DOCX to fix heading styles.
+
+    Pandoc overrides the reference doc's Heading styles with its own defaults
+    (blue accent1 color, no border). This fixes them to match the PDF:
+    near-black text, red bottom border on H1.
+
+    Bypasses python-docx entirely — modifies styles.xml in the zip directly,
+    because python-docx's save() overwrites any part blob modifications.
+    """
+    import zipfile, shutil
+    W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+
+    with zipfile.ZipFile(docx_path, 'r') as z:
+        styles_xml = z.read('word/styles.xml')
+
+    root = etree.fromstring(styles_xml)
+
+    for heading_id in ['Heading1', 'Heading2', 'Heading3', 'Heading4']:
+        style = None
+        for s in root.findall(f"{{{W_NS}}}style"):
+            if s.get(f"{{{W_NS}}}styleId") == heading_id:
+                style = s
+                break
+        if style is None:
+            continue
+
+        rPr = style.find(f"{{{W_NS}}}rPr")
+        if rPr is None:
+            rPr = etree.SubElement(style, f"{{{W_NS}}}rPr")
+
+        # Fix color: remove all attributes, set explicit val
+        color = rPr.find(f"{{{W_NS}}}color")
+        if color is not None:
+            for attr in list(color.attrib.keys()):
+                del color.attrib[attr]
+            color.set(f"{{{W_NS}}}val", "1F2328")
+        else:
+            color = etree.SubElement(rPr, f"{{{W_NS}}}color")
+            color.set(f"{{{W_NS}}}val", "1F2328")
+
+        # Fix font: remove theme refs, set explicit
+        rFonts = rPr.find(f"{{{W_NS}}}rFonts")
+        if rFonts is not None:
+            for attr in list(rFonts.attrib.keys()):
+                if "Theme" in attr or "theme" in attr:
+                    del rFonts.attrib[attr]
+            rFonts.set(f"{{{W_NS}}}ascii", "HarmonyOS Sans")
+            rFonts.set(f"{{{W_NS}}}hAnsi", "HarmonyOS Sans")
+
+        # Add bottom border to Heading 1
+        if heading_id == 'Heading1':
+            pPr = style.find(f"{{{W_NS}}}pPr")
+            if pPr is not None:
+                for pBdr in pPr.findall(f"{{{W_NS}}}pBdr"):
+                    pPr.remove(pBdr)
+                pBdr = etree.SubElement(pPr, f"{{{W_NS}}}pBdr")
+                bottom = etree.SubElement(pBdr, f"{{{W_NS}}}bottom")
+                bottom.set(f"{{{W_NS}}}val", "single")
+                bottom.set(f"{{{W_NS}}}sz", "12")  # 1.5pt = 12 eighth-points
+                bottom.set(f"{{{W_NS}}}space", "1")
+                bottom.set(f"{{{W_NS}}}color", "C7000B")
+
+    modified_xml = etree.tostring(
+        root, xml_declaration=True, encoding="UTF-8", standalone=True
+    )
+
+    # Replace styles.xml in the DOCX zip
+    tmp_path = docx_path + '.tmp'
+    with zipfile.ZipFile(docx_path, 'r') as zin:
+        with zipfile.ZipFile(tmp_path, 'w', zipfile.ZIP_DEFLATED) as zout:
+            for item in zin.infolist():
+                if item.filename == 'word/styles.xml':
+                    zout.writestr(item, modified_xml)
+                else:
+                    zout.writestr(item, zin.read(item.filename))
+    shutil.move(tmp_path, docx_path)
+    print(f"✓ Fixed heading styles in {docx_path}")
+
+
 def main():
+    if len(sys.argv) >= 3 and sys.argv[1] == "--fix":
+        fix_generated_docx(sys.argv[2])
+        return
     if len(sys.argv) < 2:
         print(f"Usage: {sys.argv[0]} <reference.docx>")
         sys.exit(1)
@@ -155,19 +259,19 @@ def main():
     doc = Document(docx_path)
 
     # ── Warning callout ──────────────────────────────────────────────
-    style = add_or_get_paragraph_style(doc, "Warning")
+    style = add_or_get_paragraph_style(doc, "warning")
     set_left_border(style, "F57C00", size_pt=3)
     set_cell_shading(style, "FFF8E1")
     set_left_indent(style, 0.5)
 
     # ── Tip callout ──────────────────────────────────────────────────
-    style = add_or_get_paragraph_style(doc, "Tip")
+    style = add_or_get_paragraph_style(doc, "tip")
     set_left_border(style, "2E7D32", size_pt=3)
     set_cell_shading(style, "E8F5E9")
     set_left_indent(style, 0.5)
 
     # ── Info callout ─────────────────────────────────────────────────
-    style = add_or_get_paragraph_style(doc, "Info")
+    style = add_or_get_paragraph_style(doc, "infobox")
     set_left_border(style, "1565C0", size_pt=3)
     set_cell_shading(style, "E3F2FD")
     set_left_indent(style, 0.5)
@@ -191,12 +295,21 @@ def main():
     set_character_shading(style, "C7000B")
     set_run_font(style, "Cascadia Code", 9, color_hex="FFFFFF", bold=True)
 
-    # ── Heading 1 — Huawei red ───────────────────────────────────────
+    # ── Heading 1 — black text + red bottom rule (matches PDF) ─────────
     try:
         h1 = doc.styles["Heading 1"]
     except KeyError:
         h1 = doc.styles.add_style("Heading 1", WD_STYLE_TYPE.PARAGRAPH)
-    set_run_font(h1, "HarmonyOS Sans", 20, color_hex="C7000B", bold=True)
+    set_run_font(h1, "HarmonyOS Sans", 20, color_hex="1F2328", bold=True)
+    set_bottom_border(h1, "C7000B", size_pt=1.5)
+
+    # ── Headings 2-4 — near-black text (matches PDF) ──────────────────
+    for level, size in [("Heading 2", 18), ("Heading 3", 16), ("Heading 4", 14)]:
+        try:
+            h = doc.styles[level]
+        except KeyError:
+            h = doc.styles.add_style(level, WD_STYLE_TYPE.PARAGRAPH)
+        set_run_font(h, "HarmonyOS Sans", size, color_hex="1F2328", bold=True)
 
     # ── Hyperlink ────────────────────────────────────────────────────
     try:

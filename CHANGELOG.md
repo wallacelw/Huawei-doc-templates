@@ -3,6 +3,27 @@
 All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
+## v2.5.0 (2026-08-21)
+
+### Multi-format styling fixes + L18: PDF is the reference
+
+- **L18 locked decision**: PDF is the primary output and visual reference.
+  DOCX, Markdown, and HTML must match the PDF as closely as possible.
+- **Image references fixed**: Pandoc now runs from the project directory
+  (not `src/`) so `assets/` is found. Images are properly embedded in DOCX.
+- **DOCX callout styles fixed**: Style names renamed to match Lua filter
+  classes (`warning`, `tip`, `infobox`). Lua filter changed to use
+  `custom-style` attribute for DOCX Divs. Callouts now have colored
+  backgrounds and borders in DOCX.
+- **DOCX heading styles fixed**: Pandoc overrides reference doc heading
+  styles with blue `accent1` defaults. Added `fix_generated_docx()`
+  post-processing that directly modifies `styles.xml` in the zip to set
+  near-black color (`#1F2328`) and H1 red bottom border.
+- **HTML H1 color fixed**: Changed from red to near-black (`--body-text`)
+  to match PDF (black text + red rule below).
+- **HTML callout label colors**: Added CSS for callout label colors
+  (warning=red, tip=green, infobox=blue) matching PDF.
+
 ## v2.4.0 (2026-08-21)
 
 ### Remove EPUB format + restructure document layout

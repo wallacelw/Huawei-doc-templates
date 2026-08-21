@@ -128,6 +128,13 @@ fi
 
 BASENAME="${TEX_FILE%.tex}"
 
+# Relative path from project dir to .tex file (for pandoc resource resolution)
+if [ "$SRC_DIR" = "$PROJECT_DIR" ]; then
+    TEX_REL="$TEX_FILE"
+else
+    TEX_REL="src/$TEX_FILE"
+fi
+
 # Display path relative to repo root for readability
 REL_DIR="$(realpath --relative-to="$REPO_ROOT" "$PROJECT_DIR" 2>/dev/null || echo "$PROJECT_DIR")"
 
@@ -277,10 +284,10 @@ generate_pandoc_format() {
     fi
     echo "  Generating ${label}..."
     local err
-    err=$(cd "$SRC_DIR" && pandoc -f latex+raw_tex \
+    err=$(cd "$PROJECT_DIR" && pandoc -f latex+raw_tex \
         --lua-filter="$LUA_FILTER" \
         "${extra_args[@]}" \
-        -t "$fmt" "$TEX_FILE" -o "../$out" 2>&1) || {
+        -t "$fmt" "$TEX_REL" -o "$out" 2>&1) || {
         RESULTS_FAIL+=("$label:pandoc failed")
         echo "  ┌─ pandoc error output:"
         echo "$err" | tail -20 | sed 's/^/  │ /'
@@ -300,7 +307,13 @@ generate_pandoc_format() {
     fi
 }
 
-generate_docx() { generate_pandoc_format "DOCX" docx docx --reference-doc="$REF_DOCX"; }
+generate_docx() {
+    generate_pandoc_format "DOCX" docx docx --reference-doc="$REF_DOCX"
+    # Post-process: fix heading styles (pandoc overrides reference doc styles)
+    if [ "$DRY_RUN" -eq 0 ] && [ -f "${PROJECT_DIR}/${BASENAME}.docx" ]; then
+        python3 "${REPO_ROOT}/templates/guide/create-reference-docx.py" --fix "${PROJECT_DIR}/${BASENAME}.docx" 2>/dev/null
+    fi
+}
 generate_md()   { generate_pandoc_format "Markdown" markdown md; }
 generate_html() { generate_pandoc_format "HTML" html5 html --template="$HTML_TMPL" -s; }
 

@@ -130,6 +130,15 @@ approval. Changing them breaks existing documents and reproducibility.
 - See [CHANGELOG.md](CHANGELOG.md) for the version history.
 - The tag is the release — there are no separate release branches.
 
+### L18. PDF is the reference — all formats follow it
+- LaTeX → PDF is the primary output and the visual reference.
+- DOCX, Markdown, and HTML are secondary outputs that should match the
+  PDF as closely as possible in styling: fonts, colors, callout boxes,
+  table styling, heading appearance, and spacing.
+- When adding or changing any visual element, update all formats to
+  match the PDF. The Lua filter, reference DOCX, and HTML template must
+  stay in sync with `guide.cls`.
+
 ---
 
 ## Conventions

@@ -46,7 +46,7 @@ $endif$
     h1 {
       font-size: 20pt;
       font-weight: 700;
-      color: var(--huawei-red);
+      color: var(--body-text);
       border-bottom: 2pt solid var(--huawei-red);
       padding-bottom: 4pt;
       margin-top: 24pt;
@@ -139,6 +139,17 @@ $endif$
     .callout.infobox {
       background-color: var(--info-bg);
       border-left-color: var(--info-border);
+    }
+
+    /* Callout label colors — match PDF (warning=red, tip=green, infobox=blue) */
+    .callout.warning > p:first-child strong {
+      color: #C7000B;
+    }
+    .callout.tip > p:first-child strong {
+      color: #2E7D32;
+    }
+    .callout.infobox > p:first-child strong {
+      color: #1565C0;
     }
 
     /* ── Objectives ───────────────────────────────────────────── */
