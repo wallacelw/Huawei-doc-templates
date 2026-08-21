@@ -3,6 +3,29 @@
 All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
+## v2.5.3 (2026-08-22)
+
+### DOCX styling overhaul — match PDF (Tier 1)
+
+- **Heading sizes restored**: Pandoc was overriding reference-doc heading sizes
+  with its defaults (H1=16pt, H2=14pt, H3=12pt, H4=12pt). `fix_generated_docx`
+  now restores PDF values: H1=20pt, H2=18pt, H3=16pt, H4=14pt.
+- **Body text size fixed**: Was 12pt (pandoc default). Now 10.5pt (sz=21)
+  matching PDF `\fontsize{10.5}{14}`. Paragraph spacing reduced from 10pt to 4pt.
+- **hutable as OpenXML table**: Tables now render with Huawei-red header row
+  (#C7000B bg, white bold text), alternating body rows (white/#F6F8FA), red
+  cell borders (#C7000B full grid), and 9pt centered font — matching the PDF
+  `hutable` environment exactly.
+- **Callout boxes as OpenXML tables**: Switched from `custom-style` Divs (which
+  only styled the first paragraph) to single-cell OpenXML tables with cell
+  shading, thick colored left border, and colored bold label — matching PDF
+  `tcolorbox` rendering. Label colors: warning=#C7000B, tip=#2E7D32,
+  infobox=#1565C0.
+- **Page layout**: A4 page size with 3/3/2/2 cm margins (was 1in all sides).
+- **Headers**: Document title via STYLEREF field (10pt, centered), different
+  first page (no header on cover).
+- **Footers**: Page number via PAGE field (10pt, centered), different first page.
+
 ## v2.5.2 (2026-08-21)
 
 ### DOCX cover page + font fixes

@@ -223,9 +223,37 @@ local function make_callout(cls, label, content)
   local label_para = pandoc.Para({pandoc.Strong({pandoc.Str(label)}), pandoc.Str(" ")})
 
   if FORMAT:match("docx") then
-    local div_content = pandoc.Blocks({label_para})
-    div_content:extend(content)
-    return pandoc.Div(div_content, pandoc.Attr("", {}, {["custom-style"] = cls}))
+    -- Callout colors: border, background, label color
+    local callout_colors = {
+      warning = {border = "F57C00", bg = "FFF8E1", label_color = "C7000B"},
+      tip     = {border = "2E7D32", bg = "E8F5E9", label_color = "2E7D32"},
+      infobox = {border = "1565C0", bg = "E3F2FD", label_color = "1565C0"},
+    }
+    local c = callout_colors[cls] or callout_colors.infobox
+    local esc_label = label:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+
+    -- Single-cell table: thick left border, thin other borders, cell shading
+    local open_xml = string.format(
+      '<w:tbl><w:tblPr><w:tblBorders>' ..
+      '<w:top w:val="single" w:sz="4" w:space="0" w:color="%s"/>' ..
+      '<w:left w:val="single" w:sz="24" w:space="0" w:color="%s"/>' ..
+      '<w:bottom w:val="single" w:sz="4" w:space="0" w:color="%s"/>' ..
+      '<w:right w:val="single" w:sz="4" w:space="0" w:color="%s"/>' ..
+      '</w:tblBorders>' ..
+      '<w:tblCellMar><w:top w:w="100" w:type="dxa"/><w:left w:w="200" w:type="dxa"/>' ..
+      '<w:bottom w:w="100" w:type="dxa"/><w:right w:w="200" w:type="dxa"/></w:tblCellMar>' ..
+      '</w:tblPr><w:tr><w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="%s"/></w:tcPr>' ..
+      '<w:p><w:r><w:rPr><w:rFonts w:ascii="HarmonyOS Sans" w:hAnsi="HarmonyOS Sans"/>' ..
+      '<w:b/><w:color w:val="%s"/><w:sz w:val="21"/><w:szCs w:val="21"/></w:rPr>' ..
+      '<w:t>%s</w:t></w:r></w:p>',
+      c.border, c.border, c.border, c.border, c.bg, c.label_color, esc_label)
+
+    local blocks = pandoc.Blocks({
+      pandoc.RawBlock("openxml", open_xml),
+    })
+    blocks:extend(content)
+    blocks:insert(pandoc.RawBlock("openxml", '</w:tc></w:tr></w:tbl>'))
+    return blocks
 
   elseif FORMAT:match("markdown") then
     -- Avoid double colon if label already ends with ":"
@@ -624,6 +652,51 @@ local function handle_hutable_env(text)
     -- aligned), which lose the pipe delimiters. RawBlock passes the pipe
     -- table through verbatim.
     if FORMAT:match("markdown") then return pandoc.RawBlock("markdown", md_table) end
+
+    -- For DOCX: render as OpenXML table with Huawei styling
+    if FORMAT:match("docx") then
+      local function esc(t)
+        return t:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+      end
+      local parts = {}
+      -- Table opening with red borders (all sides + inside)
+      parts[#parts+1] = '<w:tbl><w:tblPr><w:tblBorders>' ..
+        '<w:top w:val="single" w:sz="4" w:space="0" w:color="C7000B"/>' ..
+        '<w:left w:val="single" w:sz="4" w:space="0" w:color="C7000B"/>' ..
+        '<w:bottom w:val="single" w:sz="4" w:space="0" w:color="C7000B"/>' ..
+        '<w:right w:val="single" w:sz="4" w:space="0" w:color="C7000B"/>' ..
+        '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="C7000B"/>' ..
+        '<w:insideV w:val="single" w:sz="4" w:space="0" w:color="C7000B"/>' ..
+        '</w:tblBorders><w:tblCellMar>' ..
+        '<w:left w:w="100" w:type="dxa"/><w:right w:w="100" w:type="dxa"/>' ..
+        '</w:tblCellMar></w:tblPr>'
+      -- Header row: red background, white bold text, 9pt (sz=18), centered
+      parts[#parts+1] = '<w:tr><w:trPr><w:tblHeader/></w:trPr>'
+      for _, ct in ipairs(header_row) do
+        parts[#parts+1] = '<w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="C7000B"/></w:tcPr>' ..
+          '<w:p><w:pPr><w:jc w:val="center"/></w:pPr>' ..
+          '<w:r><w:rPr><w:rFonts w:ascii="HarmonyOS Sans" w:hAnsi="HarmonyOS Sans"/>' ..
+          '<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr>' ..
+          '<w:t>' .. esc(cell_to_md(ct)) .. '</w:t></w:r></w:p></w:tc>'
+      end
+      parts[#parts+1] = '</w:tr>'
+      -- Body rows: alternating white/F6F8FA, 9pt (sz=18), centered
+      for i, row in ipairs(rows) do
+        local bg = (i % 2 == 0) and "F6F8FA" or "FFFFFF"
+        parts[#parts+1] = '<w:tr>'
+        for _, ct in ipairs(row) do
+          parts[#parts+1] = '<w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="' .. bg .. '"/></w:tcPr>' ..
+            '<w:p><w:pPr><w:jc w:val="center"/></w:pPr>' ..
+            '<w:r><w:rPr><w:rFonts w:ascii="HarmonyOS Sans" w:hAnsi="HarmonyOS Sans"/>' ..
+            '<w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr>' ..
+            '<w:t>' .. esc(cell_to_md(ct)) .. '</w:t></w:r></w:p></w:tc>'
+        end
+        parts[#parts+1] = '</w:tr>'
+      end
+      parts[#parts+1] = '</w:tbl>'
+      return pandoc.RawBlock("openxml", table.concat(parts))
+    end
+
     return parsed.blocks[1]
   end
   return pandoc.CodeBlock(md_table)

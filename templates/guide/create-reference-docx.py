@@ -13,10 +13,11 @@ Requires: python-docx (pip install python-docx)
 
 import sys
 from docx import Document
-from docx.shared import Pt, Cm, RGBColor, Emu
-from docx.oxml import parse_xml
+from docx.shared import Pt, Cm, Mm, RGBColor, Emu
+from docx.oxml import parse_xml, OxmlElement
 from docx.oxml.ns import nsdecls, qn
 from docx.enum.style import WD_STYLE_TYPE
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from lxml import etree
 
 
@@ -238,6 +239,18 @@ def fix_generated_docx(docx_path):
             bottom.set(f"{{{W_NS}}}space", "1")
             bottom.set(f"{{{W_NS}}}color", "C7000B")
 
+        # Fix size (pandoc overrides reference doc sizes — restore PDF values)
+        heading_sizes = {'Heading1': '40', 'Heading2': '36', 'Heading3': '32', 'Heading4': '28'}
+        target_sz = heading_sizes.get(heading_id)
+        if target_sz:
+            for tag in ['sz', 'szCs']:
+                sz = rPr.find(f"{{{W_NS}}}{tag}")
+                if sz is not None:
+                    sz.set(f"{{{W_NS}}}val", target_sz)
+                else:
+                    sz = etree.SubElement(rPr, f"{{{W_NS}}}{tag}")
+                    sz.set(f"{{{W_NS}}}val", target_sz)
+
     # Fix Title style (cover page): 36pt, near-black, HarmonyOS Sans
     for s in root.findall(f"{{{W_NS}}}style"):
         if s.get(f"{{{W_NS}}}styleId") == "Title":
@@ -286,6 +299,47 @@ def fix_generated_docx(docx_path):
             rFonts.set(f"{{{W_NS}}}ascii", "HarmonyOS Sans")
         if rFonts.get(f"{{{W_NS}}}hAnsiTheme") and not rFonts.get(f"{{{W_NS}}}hAnsi"):
             rFonts.set(f"{{{W_NS}}}hAnsi", "HarmonyOS Sans")
+
+    # Fix Normal style: 10.5pt (sz=21) to match PDF body text (10.5pt/14pt leading)
+    for s in root.findall(f"{{{W_NS}}}style"):
+        if s.get(f"{{{W_NS}}}styleId") == "Normal":
+            rPr = s.find(f"{{{W_NS}}}rPr")
+            if rPr is not None:
+                for tag in ['sz', 'szCs']:
+                    sz = rPr.find(f"{{{W_NS}}}{tag}")
+                    if sz is not None:
+                        sz.set(f"{{{W_NS}}}val", "21")
+                    else:
+                        sz = etree.SubElement(rPr, f"{{{W_NS}}}{tag}")
+                        sz.set(f"{{{W_NS}}}val", "21")
+            pPr = s.find(f"{{{W_NS}}}pPr")
+            if pPr is not None:
+                spacing = pPr.find(f"{{{W_NS}}}spacing")
+                if spacing is not None:
+                    spacing.set(f"{{{W_NS}}}after", "80")
+            break
+
+    # Fix docDefaults: 10.5pt (sz=21), spacing after=80 (4pt parskip)
+    docDefaults = root.find(f"{{{W_NS}}}docDefaults")
+    if docDefaults is not None:
+        rPrDefault = docDefaults.find(f"{{{W_NS}}}rPrDefault")
+        if rPrDefault is not None:
+            rPr = rPrDefault.find(f"{{{W_NS}}}rPr")
+            if rPr is not None:
+                for tag in ['sz', 'szCs']:
+                    sz = rPr.find(f"{{{W_NS}}}{tag}")
+                    if sz is not None:
+                        sz.set(f"{{{W_NS}}}val", "21")
+                    else:
+                        sz = etree.SubElement(rPr, f"{{{W_NS}}}{tag}")
+                        sz.set(f"{{{W_NS}}}val", "21")
+        pPrDefault = docDefaults.find(f"{{{W_NS}}}pPrDefault")
+        if pPrDefault is not None:
+            pPr = pPrDefault.find(f"{{{W_NS}}}pPr")
+            if pPr is not None:
+                spacing = pPr.find(f"{{{W_NS}}}spacing")
+                if spacing is not None:
+                    spacing.set(f"{{{W_NS}}}after", "80")
 
     modified_xml = etree.tostring(
         root, xml_declaration=True, encoding="UTF-8", standalone=True
@@ -400,6 +454,63 @@ def main():
 
     # ── Theme + default fonts: HarmonyOS Sans for all body/heading text ──
     set_theme_fonts(doc, "HarmonyOS Sans")
+
+    # ── Page layout: A4, margins 3/3/2/2 cm (matches PDF \geometry) ──────
+    section = doc.sections[0]
+    section.page_width = Mm(210)
+    section.page_height = Mm(297)
+    section.top_margin = Cm(3)
+    section.bottom_margin = Cm(3)
+    section.left_margin = Cm(2)
+    section.right_margin = Cm(2)
+
+    # Different first page: cover page has no header/footer
+    section.different_first_page_header_footer = True
+
+    # ── Header: document title via STYLEREF field (10pt, centered) ────────
+    # STYLEREF "Title" automatically shows the text of the first paragraph
+    # with the Title style — no need to know the title at build time.
+    header = section.header
+    header.is_linked_to_previous = False
+    hp = header.paragraphs[0]
+    hp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    for run in [hp.add_run(), hp.add_run(), hp.add_run(), hp.add_run("Document Title"), hp.add_run()]:
+        run.font.size = Pt(10)
+        run.font.name = "HarmonyOS Sans"
+    # Field: STYLEREF "Title"
+    fld_begin = OxmlElement('w:fldChar')
+    fld_begin.set(qn('w:fldCharType'), 'begin')
+    hp.runs[0]._r.append(fld_begin)
+    instr = OxmlElement('w:instrText')
+    instr.set(qn('xml:space'), 'preserve')
+    instr.text = ' STYLEREF "Title" \\* MERGEFORMAT '
+    hp.runs[1]._r.append(instr)
+    fld_sep = OxmlElement('w:fldChar')
+    fld_sep.set(qn('w:fldCharType'), 'separate')
+    hp.runs[2]._r.append(fld_sep)
+    fld_end = OxmlElement('w:fldChar')
+    fld_end.set(qn('w:fldCharType'), 'end')
+    hp.runs[4]._r.append(fld_end)
+
+    # ── Footer: page number (10pt, centered) ──────────────────────────────
+    footer = section.footer
+    footer.is_linked_to_previous = False
+    fp = footer.paragraphs[0]
+    fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    for run in [fp.add_run(), fp.add_run(), fp.add_run()]:
+        run.font.size = Pt(10)
+        run.font.name = "HarmonyOS Sans"
+    # Field: PAGE
+    fld_begin = OxmlElement('w:fldChar')
+    fld_begin.set(qn('w:fldCharType'), 'begin')
+    fp.runs[0]._r.append(fld_begin)
+    instr = OxmlElement('w:instrText')
+    instr.set(qn('xml:space'), 'preserve')
+    instr.text = ' PAGE '
+    fp.runs[1]._r.append(instr)
+    fld_end = OxmlElement('w:fldChar')
+    fld_end.set(qn('w:fldCharType'), 'end')
+    fp.runs[2]._r.append(fld_end)
 
     # ── Save ─────────────────────────────────────────────────────────
     doc.save(docx_path)
