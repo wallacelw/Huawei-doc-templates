@@ -3,6 +3,27 @@
 All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
+## v2.3.0 (2026-08-21)
+
+### Font configuration across all output formats
+
+- **DOCX**: `create-reference-docx.py` now sets the theme `majorFont` and
+  `minorFont` (latin/ea/cs) to HarmonyOS Sans via direct `theme1.xml`
+  mutation (python-docx has no theme API). Previously the theme defaulted
+  to Calibri (headings) and Cambria (body); now all theme-referencing
+  styles inherit HarmonyOS Sans. Explicit styles (Source Code → Cascadia
+  Code) keep their override. `docDefaults/rPrDefault` also updated.
+- **EPUB**: New `guide-epub.css` brand stylesheet passed via `--css`.
+  Replaces pandoc's default epub.css with Huawei brand fonts, colors,
+  callouts, and table styling matching the HTML template. Fonts are not
+  embedded (brand font + e-reader limitations); fallback chain handles
+  missing fonts.
+- **LaTeX**: Renamed internal macro `\consolasfont` → `\lg@codefont`
+  (loaded Cascadia Code, not Consolas; name was misleading). `\codefont`
+  public API unchanged.
+- **README**: Added `guide-epub.css` to project layout; noted EPUB brand
+  CSS in multi-format section.
+
 ## v2.2.1 (2026-08-20)
 
 ### Fix: \imageplaceholder no longer emits real image references

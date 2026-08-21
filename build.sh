@@ -17,6 +17,7 @@ REPO_ROOT="$(cd "$(dirname "$(realpath "$0")")" && pwd)"
 LUA_FILTER="${REPO_ROOT}/templates/guide/guide-pandoc.lua"
 REF_DOCX="${REPO_ROOT}/templates/guide/guide-reference.docx"
 HTML_TMPL="${REPO_ROOT}/templates/guide/guide-template.html"
+EPUB_CSS="${REPO_ROOT}/templates/guide/guide-epub.css"
 
 # ── Color support ─────────────────────────────────────────────────────────
 if [ -t 1 ] && command -v tput &>/dev/null && [ "$(tput colors 2>/dev/null || echo 0)" -ge 8 ]; then
@@ -304,7 +305,7 @@ generate_pandoc_format() {
 generate_docx() { generate_pandoc_format "DOCX" docx docx --reference-doc="$REF_DOCX"; }
 generate_md()   { generate_pandoc_format "Markdown" markdown md; }
 generate_html() { generate_pandoc_format "HTML" html5 html --template="$HTML_TMPL" -s; }
-generate_epub() { generate_pandoc_format "EPUB" epub epub; }
+generate_epub() { generate_pandoc_format "EPUB" epub epub --css="$EPUB_CSS"; }
 
 # ── Summary ──────────────────────────────────────────────────────────────
 show_summary() {

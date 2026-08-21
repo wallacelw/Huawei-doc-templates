@@ -130,10 +130,10 @@ make epub           # EPUB only (pt + en)
 make clean-formats  # remove generated multi-format files
 ```
 
-The Lua filter (`templates/guide/guide-pandoc.lua`) handles all custom commands (see [`SKILL.md`](templates/guide/SKILL.md) for the full reference). DOCX uses custom styles from `guide-reference.docx`; HTML uses `guide-template.html` with Huawei brand CSS.
+The Lua filter (`templates/guide/guide-pandoc.lua`) handles all custom commands (see [`SKILL.md`](templates/guide/SKILL.md) for the full reference). DOCX uses custom styles from `guide-reference.docx` (theme fonts: HarmonyOS Sans); HTML uses `guide-template.html` with Huawei brand CSS; EPUB uses `guide-epub.css` with the same brand fonts and colors.
 
 Generated outputs are gitignored (build artifacts). Only the filter, reference
-DOCX, HTML template, and Python script are committed.
+DOCX, HTML template, EPUB CSS, and Python script are committed.
 
 ## VS Code (optional)
 
@@ -174,6 +174,7 @@ and environment reference.
 │       ├── guide-pandoc.lua  # Pandoc Lua filter (DOCX/MD/HTML/EPUB output)
 │       ├── guide-reference.docx  # custom DOCX styles for Pandoc
 │       ├── guide-template.html   # HTML5 template with Huawei brand CSS
+│       ├── guide-epub.css        # EPUB stylesheet with Huawei brand CSS
 │       ├── create-reference-docx.py  # regenerate guide-reference.docx
 │       ├── .latexmkrc        # latexmk config (XeLaTeX, TZ=America/Sao_Paulo)
 │       └── common-assets/      # logos, sample images, example scripts

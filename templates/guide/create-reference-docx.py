@@ -17,6 +17,7 @@ from docx.shared import Pt, Cm, RGBColor, Emu
 from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls, qn
 from docx.enum.style import WD_STYLE_TYPE
+from lxml import etree
 
 
 def add_or_get_paragraph_style(doc, name, base_style=None):
@@ -94,6 +95,57 @@ def set_character_shading(style, color_hex):
     rPr.append(shd)
 
 
+def set_theme_fonts(doc, body_font):
+    """Set the DOCX theme majorFont/minorFont and docDefaults to body_font.
+
+    python-docx exposes no API for the theme part, so we reach into the
+    package parts and mutate theme1.xml via lxml. This makes every style
+    that references the theme (asciiTheme="minorHAnsi"/"majorHAnsi")
+    inherit body_font, while styles with explicit rFonts (e.g. Source Code
+    -> Cascadia Code) keep their explicit font.
+    """
+    A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
+
+    # 1. Find the theme part
+    theme_part = None
+    for part in doc.part.package.iter_parts():
+        if str(part.partname) == "/word/theme/theme1.xml":
+            theme_part = part
+            break
+    if theme_part is None:
+        raise RuntimeError("word/theme/theme1.xml not found in package")
+
+    # 2. Set majorFont + minorFont (latin, ea, cs) typeface
+    root = etree.fromstring(theme_part.blob)
+    font_scheme = root.find(f"{{{A_NS}}}themeElements/{{{A_NS}}}fontScheme")
+    if font_scheme is None:
+        raise RuntimeError("a:fontScheme not found in theme1.xml")
+    for font_tag in ("majorFont", "minorFont"):
+        group = font_scheme.find(f"{{{A_NS}}}{font_tag}")
+        if group is None:
+            continue
+        for child_name in ("latin", "ea", "cs"):
+            child = group.find(f"{{{A_NS}}}{child_name}")
+            if child is None:
+                child = etree.SubElement(group, f"{{{A_NS}}}{child_name}")
+            child.set("typeface", body_font)
+    theme_part._blob = etree.tostring(
+        root, xml_declaration=True, encoding="UTF-8", standalone=True
+    )
+
+    # 3. Update docDefaults/rPrDefault rFonts for consistency
+    dd = doc.styles.element.find(qn("w:docDefaults"))
+    if dd is not None:
+        rpr_default = dd.find(qn("w:rPrDefault"))
+        if rpr_default is not None:
+            rpr = rpr_default.find(qn("w:rPr"))
+            if rpr is not None:
+                rfonts = rpr.find(qn("w:rFonts"))
+                if rfonts is not None:
+                    for attr in ("ascii", "hAnsi", "eastAsia", "cs"):
+                        rfonts.set(qn(f"w:{attr}"), body_font)
+
+
 def main():
     if len(sys.argv) < 2:
         print(f"Usage: {sys.argv[0]} <reference.docx>")
@@ -158,6 +210,9 @@ def main():
         rPr.remove(existing)
     u_elem = parse_xml(f'<w:u {nsdecls("w")} w:val="none"/>')
     rPr.append(u_elem)
+
+    # ── Theme + default fonts: HarmonyOS Sans for all body/heading text ──
+    set_theme_fonts(doc, "HarmonyOS Sans")
 
     # ── Save ─────────────────────────────────────────────────────────
     doc.save(docx_path)

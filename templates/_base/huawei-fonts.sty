@@ -26,10 +26,10 @@
 % Contextuals=NoAlternate: disable calt (programming ligatures like //, =>, ==)
 %   which break PDF copy-paste (ligated glyphs get wrong ToUnicode mappings).
 \IfFontExistsTF{Cascadia Code}
-  {\newfontfamily\consolasfont{Cascadia Code}[Ligatures=NoCommon, Contextuals=NoAlternate, AutoFakeSlant=0.2]}
+  {\newfontfamily\lg@codefont{Cascadia Code}[Ligatures=NoCommon, Contextuals=NoAlternate, AutoFakeSlant=0.2]}
   {\lg@warnfont{Cascadia Code}{DejaVu Sans Mono}%
-   \newfontfamily\consolasfont{DejaVu Sans Mono}[Ligatures=NoCommon]}
-\newcommand{\codefont}{\consolasfont}
+   \newfontfamily\lg@codefont{DejaVu Sans Mono}[Ligatures=NoCommon]}
+\newcommand{\codefont}{\lg@codefont}
 
 % Base body size: 10.5pt with ~14pt leading
 \renewcommand\normalsize{\@setfontsize\normalsize{10.5}{14}}
