@@ -3,6 +3,23 @@
 All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
+## v2.5.9 (2026-08-22)
+
+### DOCX fixes: callout spacing, TOC, navigation
+
+- **Callout spacing**: Added a 6pt spacing paragraph after each callout table.
+  Tables don't inherit paragraph style spacing, so adjacent callouts had no
+  visual gap between them.
+- **TOC auto-update**: Added `<w:updateFields w:val="true"/>` to `settings.xml`
+  so Word automatically populates the TOC field when the document is opened.
+  Previously the TOC appeared empty until the user manually right-clicked →
+  Update Field.
+- **Navigation pane**: Fixed `pBdr` element order in Heading1 style. The bottom
+  border was appended after `spacing` and `outlineLvl`, violating the OOXML
+  schema order (`pBdr` must come before `spacing`). Now correctly inserted
+  before `spacing`. Heading styles have `outlineLvl` 0-3 for H1-H4, so Word's
+  navigation pane shows the full document structure.
+
 ## v2.5.8 (2026-08-22)
 
 ### DOCX style architecture overhaul

@@ -271,6 +271,8 @@ local function make_callout(cls, label, content)
     })
     blocks:extend(content)
     blocks:insert(pandoc.RawBlock("openxml", '</w:tc></w:tr></w:tbl>'))
+    -- Add spacing paragraph after callout table for visual separation
+    blocks:insert(pandoc.RawBlock("openxml", '<w:p><w:pPr><w:spacing w:before="120" w:after="0"/></w:pPr></w:p>'))
     return blocks
 
   elseif FORMAT:match("markdown") then
