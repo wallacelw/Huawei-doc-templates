@@ -3,6 +3,22 @@
 All notable changes to the huawei-doc-templates project are documented here.
 Per-document changelogs are maintained via `\changelogentry` in each `.tex` file.
 
+## v2.5.2 (2026-08-21)
+
+### DOCX cover page + font fixes
+
+- **Title style fixed**: Was 18pt blue (pandoc default). Now 36pt near-black
+  bold centered, matching PDF cover (`\fontsize{36}{42}\bfseries`).
+- **Cover page content added**: DOCX now includes cover text (16pt centered)
+  and version/date (12pt centered) after the title, plus a page break —
+  matching the PDF `\makecover` layout.
+- **VerbatimChar font fixed**: Was Consolas (pandoc default). Now Cascadia
+  Code, matching PDF code font and L8 fallback chain.
+- **Theme-only font refs eliminated**: Styles that used `asciiTheme="majorHAnsi"`
+  without explicit font names now have `ascii="HarmonyOS Sans"` added.
+  Prevents Word from falling back to Cambria when HarmonyOS Sans is not
+  installed.
+
 ## v2.5.1 (2026-08-21)
 
 ### Review fixes: H2-H4 weight, build robustness, CSS variables

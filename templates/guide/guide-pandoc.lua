@@ -363,6 +363,35 @@ function Pandoc(doc)
       if version then doc.meta["doc-version"] = version end
       local date = find_cmd_arg(src, "setdocdate")
       if date then doc.meta.date = date:gsub("\\today", os.date("%Y-%m-%d")) end
+
+      -- For DOCX: add cover page content (cover text + version/date + page break)
+      -- The title is rendered by pandoc via doc.meta.title (Title style).
+      if FORMAT:match("docx") then
+        local ct = find_cmd_arg(src, "setcovertext") or "Huawei Technologies CO., LTD"
+        local meta_parts = {}
+        if version and version ~= "" then table.insert(meta_parts, "v" .. version) end
+        if date then
+          local ds = date:gsub("\\today", os.date("%Y-%m-%d"))
+          if ds ~= "" then table.insert(meta_parts, ds) end
+        end
+        local mt = table.concat(meta_parts, " — ")
+        local cb = pandoc.Blocks({})
+        cb:insert(pandoc.RawBlock("openxml",
+          '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="600" w:after="200"/></w:pPr>' ..
+          '<w:r><w:rPr><w:rFonts w:ascii="HarmonyOS Sans" w:hAnsi="HarmonyOS Sans"/>' ..
+          '<w:sz w:val="32"/><w:szCs w:val="32"/></w:rPr>' ..
+          '<w:t>' .. ct:gsub("&", "&amp;") .. '</w:t></w:r></w:p>'))
+        if mt ~= "" then
+          cb:insert(pandoc.RawBlock("openxml",
+            '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="100" w:after="200"/></w:pPr>' ..
+            '<w:r><w:rPr><w:rFonts w:ascii="HarmonyOS Sans" w:hAnsi="HarmonyOS Sans"/>' ..
+            '<w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr>' ..
+            '<w:t>' .. mt:gsub("&", "&amp;") .. '</w:t></w:r></w:p>'))
+        end
+        cb:insert(pandoc.RawBlock("openxml", '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'))
+        for i = #cb, 1, -1 do doc.blocks:insert(1, cb[i]) end
+        doc.meta.date = nil
+      end
     end
   end
 

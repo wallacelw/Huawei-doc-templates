@@ -238,6 +238,55 @@ def fix_generated_docx(docx_path):
             bottom.set(f"{{{W_NS}}}space", "1")
             bottom.set(f"{{{W_NS}}}color", "C7000B")
 
+    # Fix Title style (cover page): 36pt, near-black, HarmonyOS Sans
+    for s in root.findall(f"{{{W_NS}}}style"):
+        if s.get(f"{{{W_NS}}}styleId") == "Title":
+            rPr = s.find(f"{{{W_NS}}}rPr")
+            if rPr is not None:
+                color = rPr.find(f"{{{W_NS}}}color")
+                if color is not None:
+                    for attr in list(color.attrib.keys()):
+                        del color.attrib[attr]
+                    color.set(f"{{{W_NS}}}val", "1F2328")
+                rFonts = rPr.find(f"{{{W_NS}}}rFonts")
+                if rFonts is not None:
+                    for attr in list(rFonts.attrib.keys()):
+                        if "Theme" in attr or "theme" in attr:
+                            del rFonts.attrib[attr]
+                    rFonts.set(f"{{{W_NS}}}ascii", "HarmonyOS Sans")
+                    rFonts.set(f"{{{W_NS}}}hAnsi", "HarmonyOS Sans")
+                for tag in ['sz', 'szCs']:
+                    sz = rPr.find(f"{{{W_NS}}}{tag}")
+                    if sz is not None:
+                        sz.set(f"{{{W_NS}}}val", "72")
+            break
+
+    # Fix VerbatimChar style: Consolas → Cascadia Code
+    for s in root.findall(f"{{{W_NS}}}style"):
+        if s.get(f"{{{W_NS}}}styleId") == "VerbatimChar":
+            rPr = s.find(f"{{{W_NS}}}rPr")
+            if rPr is not None:
+                rFonts = rPr.find(f"{{{W_NS}}}rFonts")
+                if rFonts is not None:
+                    rFonts.set(f"{{{W_NS}}}ascii", "Cascadia Code")
+                    rFonts.set(f"{{{W_NS}}}hAnsi", "Cascadia Code")
+            break
+
+    # Fix all styles: add explicit font names alongside theme references
+    # Prevents Word from falling back to Cambria when HarmonyOS Sans
+    # is not installed (theme refs alone don't provide a fallback name)
+    for style in root.findall(f"{{{W_NS}}}style"):
+        rPr = style.find(f"{{{W_NS}}}rPr")
+        if rPr is None:
+            continue
+        rFonts = rPr.find(f"{{{W_NS}}}rFonts")
+        if rFonts is None:
+            continue
+        if rFonts.get(f"{{{W_NS}}}asciiTheme") and not rFonts.get(f"{{{W_NS}}}ascii"):
+            rFonts.set(f"{{{W_NS}}}ascii", "HarmonyOS Sans")
+        if rFonts.get(f"{{{W_NS}}}hAnsiTheme") and not rFonts.get(f"{{{W_NS}}}hAnsi"):
+            rFonts.set(f"{{{W_NS}}}hAnsi", "HarmonyOS Sans")
+
     modified_xml = etree.tostring(
         root, xml_declaration=True, encoding="UTF-8", standalone=True
     )
@@ -321,6 +370,20 @@ def main():
         except KeyError:
             h = doc.styles.add_style(level, WD_STYLE_TYPE.PARAGRAPH)
         set_run_font(h, "HarmonyOS Sans", size, color_hex="1F2328", bold=False)
+
+    # ── Title (cover page) — 36pt, near-black, bold, centered (matches PDF) ──
+    try:
+        title_style = doc.styles["Title"]
+    except KeyError:
+        title_style = doc.styles.add_style("Title", WD_STYLE_TYPE.PARAGRAPH)
+    set_run_font(title_style, "HarmonyOS Sans", 36, color_hex="1F2328", bold=True)
+
+    # ── Verbatim Char — Cascadia Code (matches PDF code font) ──────────────
+    try:
+        vc_style = doc.styles["Verbatim Char"]
+    except KeyError:
+        vc_style = doc.styles.add_style("Verbatim Char", WD_STYLE_TYPE.CHARACTER)
+    set_run_font(vc_style, "Cascadia Code", 11, color_hex="1F2328")
 
     # ── Hyperlink ────────────────────────────────────────────────────
     try:
