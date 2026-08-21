@@ -42,3 +42,4 @@ examples/setup-guide/setup-guide.html
 # User documents — ignore everything in documents/ except README.md
 documents/*
 !documents/README.md
+__pycache__/
